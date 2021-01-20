@@ -1,9 +1,9 @@
 rockspec_format = '3.0'
 package = 'myauth'
-version = '1.0.0-0'
+version = '1.0.1-0'
 source = {
   url = 'git://github.com/ozzy-ext-myauth/myauth-lua',
-  tag = '1.0.0'
+  tag = 'develop'
 }
 description = {
   summary = 'Provides authorization for nginx based on config',

@@ -19,6 +19,10 @@ local function create_m(config)
   m.strategy = require "stuff.myauth-test-nginx" 
   m.strategy.debug_mode = debug_mode
 
+  if(debug_mode) then
+    m.event_listener = require "stuff.test-event-listener"
+  end
+
   local secrets = { jwt_secret="qwerty" }
 
   m.initialize(config, secrets)

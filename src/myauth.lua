@@ -4,6 +4,8 @@ local _M = {}
 
 _M.strategy = require "myauth.nginx"
 
+_M.event_listener = require "myauth.empty-event-listener"
+
 local base64 = require "base64"
 local cjson = require "cjson"
 local mjwt = require "myauth.jwt"
@@ -83,21 +85,25 @@ end
 local function check_anon(url)
   
   if(config == nil or config.anon == nil) then
+    _M.event_listener.on_deny_dueto_no_anon_config(url)
     _M.strategy.exit_forbidden("There is no anon access in configuration")
   end
   
   for i, url_pattern in ipairs(config.anon) do
     if(check_url(url, url_pattern)) then
+      _M.event_listener.on_allow_anon(url)
       return
     end
   end
 
+  _M.event_listener.on_deny_dueto_no_anon_rules_found(url)
   _M.strategy.exit_forbidden("No allowing rules were found for anon")
 end
 
 local function check_basic(url, cred)
 
   if(config == null or config.basic == nil) then
+    _M.event_listener.on_deny_dueto_no_basic_config(url)
     _M.strategy.exit_forbidden("There's no basic access in configuration")
   end
 
@@ -107,6 +113,7 @@ local function check_basic(url, cred)
     if user.id == user_id then
 
       if user.pass ~= user_pass then
+        _M.event_listener.on_deny_dueto_wrong_basic_pass(url, user_id)
         _M.strategy.exit_forbidden("Wrong user password")
       end  
 
@@ -115,7 +122,8 @@ local function check_basic(url, cred)
         if check_url(url, url_pattern) then
 
           auth_schema.apply_basic(user_id, _M.strategy)
-
+          
+          _M.event_listener.on_allow_basic(url, user_id)
           return
 
         end
@@ -124,18 +132,37 @@ local function check_basic(url, cred)
     end
   end
 
+  _M.event_listener.on_deny_dueto_no_basic_rules_found(url, user_id)
   _M.strategy.exit_forbidden("No allowing rules were found for basic")
 end
 
-local function check_rbac_token(token, host)
-  return mjwt.authorize(token, host)
+local function check_rbac_token(url, token, host)
+  local token, error_code, error_reason = mjwt.authorize(token, host)
+
+    if(error_code ~= nil) then
+      _M.event_listener.on_deny_rbac_token(url, host, error_code, error_reason)
+    end
+
+    if(res == 'missing_token') then
+      _M.strategy.exit_unauthorized("Missing token")
+    end
+
+    if(res == 'invalid_token') then
+      _M.strategy.exit_unauthorized("Invalid token: " .. error_reason)
+    end
+
+    if(res == 'invalid_audience') then
+      _M.strategy.exit_unauthorized("Invalid audience: " .. error_reason)
+    end
+
+    if(res == 'no_host') then
+      _M.strategy.exit_unauthorized(error_reason)
+    end
+
+    return token
 end
 
 local function check_rbac_roles(url, http_method, token_roles)
-
-  if(config == null or config.rbac == nil or config.rbac.rules == nil) then
-    _M.strategy.exit_forbidden("There's no bearer access in configuration")
-  end
 
   local calc_rules = {}
   local rules_factors = {}
@@ -204,15 +231,19 @@ local function check_rbac_roles(url, http_method, token_roles)
   local hasDenies = has_value(rules_factors, false);
   local hasAllows = has_value(rules_factors, true);
 
-  return not hasDenies and hasAllows, { rules = calc_rules, roles = token_roles, method = http_method, url = url }
+  local total_result = not hasDenies and hasAllows
+
+  return total_result, { rules = calc_rules, roles = token_roles, method = http_method, url = url }
 end
 
 local function check_rbac(url, http_method, token, host)
 
-  local token_obj = check_rbac_token(token, host)
+  if(config == null or config.rbac == nil or config.rbac.rules == nil) then
+    _M.event_listener.on_deny_dueto_no_rbac_config(url)
+    _M.strategy.exit_forbidden("There's no rbac access in configuration")
+  end
 
-  --print(cjson.encode(token_obj))
-
+  local token_obj = check_rbac_token(url, token, host)
   local token_roles = mjwt.get_token_roles(token_obj)
   local check_result, debug_info = check_rbac_roles(url, http_method, token_roles)
 
@@ -222,11 +253,14 @@ local function check_rbac(url, http_method, token, host)
   end
 
   if not check_result then
-      _M.strategy.exit_forbidden("No allowing rules were found for bearer")
-    else
-      local claims = mjwt.get_token_biz_claims(token_obj)
-      auth_schema.apply_rbac(claims, _M.strategy)
-    end 
+    _M.event_listener.on_deny_no_rbac_rules_found(url, http_method, token_obj.payload.sub)
+    _M.strategy.exit_forbidden("No allowing rules were found for bearer")
+  else
+    local claims = mjwt.get_token_biz_claims(token_obj)
+    auth_schema.apply_rbac(claims, _M.strategy)
+  end 
+
+  _M.event_listener.on_allow_rbac(url, http_method, token_obj.payload.sub)
 end
 
 function _M.initialize(init_config, init_secrets)
@@ -237,8 +271,6 @@ function _M.initialize(init_config, init_secrets)
   if init_config.rbac ~= nil then
     mjwt.ignore_audience = init_config.rbac.ignore_audience
   end
-
-  mjwt.strategy = _M.strategy
 
   if init_config.debug_mode == true then
     _M.strategy.debug_mode = true
@@ -279,14 +311,17 @@ function _M.authorize_core(url, http_method, auth_header, host_header)
   end
 
   if check_dont_apply_for(url) then
+    _M.event_listener.on_allow_dueto_dont_apply_for(url)    
     return
   end
 
   if config.only_apply_for ~= nil and not check_only_apply_for(url) then
+    _M.event_listener.on_allow_dueto_only_apply_for(url)
     return
   end
 
   if check_black_list(url) then
+    _M.event_listener.on_deny_dueto_black_list(url)
     _M.strategy.exit_forbidden("Specified url was found in black list")
   end
 
@@ -307,6 +342,7 @@ function _M.authorize_core(url, http_method, auth_header, host_header)
   	return
 	end
 
+  _M.event_listener.on_deny_dueto_unsupported_auth_type(url, auth_header)
   print("Auth header: " .. auth_header)
   _M.strategy.exit_forbidden("Unsupported authorization type")
 end

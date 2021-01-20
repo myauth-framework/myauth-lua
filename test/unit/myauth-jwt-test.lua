@@ -7,13 +7,11 @@ local host = "test.host.ru"
 
 local debug_mode = false
 
+local cjson = require "cjson"
+
 local function create_m()
    local m = require "myauth.jwt"
-
-   m.strategy = require "stuff.myauth-test-nginx"
    m.secret = "qwerty"
-   m.strategy.debug_mode = debug_mode
-
    return m;
 end
 
@@ -24,13 +22,13 @@ end
 function tb:test_should_not_authorize_wrong_token()
 
    local m = create_m()
-   local v, err = pcall(m.authorize, wrong_token)
+   local t, error_code, error_reason = m.authorize(wrong_token)
    
-   if v then
-      error("No expected error")
+   if (error_code ~= 'invalid_token') then
+      error("No expected error. Actual: " .. (error_code or "[nil]"))
    else
       if debug_mode then
-         print("Actual error: " .. err)
+         print("Actual error: " .. error_code ..  "; " .. error_reason)
       end
    end
 end
@@ -40,13 +38,13 @@ function tb:test_should_not_authorize_wrong_secret()
    local m = create_m()
    m.secret = "wrong_secret"
 
-   local v, err = pcall(m.authorize, token);
-
-   if v then
+   local  t, error_code, error_reason = m.authorize(token)
+   
+   if (error_code ~= 'invalid_token') then
       error("No expected error")
    else
       if debug_mode then
-         print("Actual error: " .. err)
+         print("Actual error: " .. error_code ..  "; " .. error_reason)
       end
    end
 end
@@ -54,11 +52,16 @@ end
 function tb:test_should_provide_roles()
 
    local m = create_m()
-   local token_obj = m.authorize(token, host)
+   local token_obj, error_code, error_reason = m.authorize(token, host)
+
+   if (error_code ~= nil) then
+      error("Unexpected error. Actual: " .. (error_code or "[nil]") .. "; " .. error_reason)
+   end
+
    local roles = m.get_token_roles(token_obj)
 
    for _, v in ipairs(roles) do
-     if v == "Admin" then
+     if (v == "Admin") then
          return
      end
    end
