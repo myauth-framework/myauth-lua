@@ -4,14 +4,13 @@ local _M = {}
 
 local cjson = require "cjson"
 
-_M.strategy = require "myauth.nginx"
 _M.secret = nil
 _M.ignore_audience = false
 
-function _M.authorize(token, host)
+function _M.authorize(token, host) -- token, error_code, error_reason 
 
   if token == nil then
-    _M.strategy.exit_unauthorized("Missing token")
+    return nil, 'missing_token', nil;
   end
 
   local jwt = require "resty.jwt"
@@ -23,22 +22,22 @@ function _M.authorize(token, host)
   local jwt_obj = jwt:verify(_M.secret, token)
 
   if not jwt_obj.verified then
-    _M.strategy.exit_forbidden("Invalid token: " .. jwt_obj.reason)
+    return nil, 'invalid_token', jwt_obj.reason;
   end
 
   if not _M.ignore_audience then
     if jwt_obj.payload.aud ~= null then
       if host ~= nil then
         if(jwt_obj.payload.aud ~= host) then
-            _M.strategy.exit_forbidden("Invalid audience. Expected '" .. jwt_obj.payload.aud .. "' but got '" .. host .. "'")
+            return nil, 'invalid_audience', "Expected '" .. jwt_obj.payload.aud .. "' but actual '" .. host .. "'";
         end
       else
-        _M.strategy.exit_forbidden("Cant detect a host to check audience")
+        return nil, 'no_host', "Cant detect a host to check audience";
       end
     end
   end 
   
-  return jwt_obj
+  return jwt_obj, nil,nil
 
 end
 
