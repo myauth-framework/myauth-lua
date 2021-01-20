@@ -10,7 +10,7 @@ services:
 
   myauth-lua-test-server:
     container_name: myauth-lua-test-server
-    image: myauth-lua
+    image: myauth-lua-test-server
     depends_on:
       - myauth-lua-test-back-server
     volumes:
