@@ -31,5 +31,6 @@ build = {
     ['myauth.scheme-v1'] = 'src/myauth/scheme-v1.lua',
     ['myauth.scheme-v2'] = 'src/myauth/scheme-v2.lua',
     ['myauth.secrets'] = 'src/myauth/secrets.lua',
+    ['myauth.empty-event-listener'] = 'src/myauth/empty-event-listener.lua',
   }
 }
