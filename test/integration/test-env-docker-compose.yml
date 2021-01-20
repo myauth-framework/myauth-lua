@@ -1,0 +1,19 @@
+version: "3.0"
+
+services:
+
+  myauth-lua-test-back-server:
+    container_name: myauth-lua-test-back-server
+    image: nginx:1.19.6
+    volumes:
+      - .\test-back-nginx.conf:/etc/nginx/conf.d/default.conf
+
+  myauth-lua-test-server:
+    container_name: myauth-lua-test-server
+    image: myauth-lua
+    depends_on:
+      - myauth-lua-test-back-server
+    volumes:
+      - .\test-server\nginx.conf:/etc/nginx/conf.d/default.conf
+      - .\test-server\test-config.lua:/app/configs/auth-config.lua
+      - .\test-server\test-secrets.lua:/app/configs/auth-secrets.lua
