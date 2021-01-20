@@ -3,7 +3,7 @@ package = 'myauth'
 version = '1.0.0-0'
 source = {
   url = 'git://github.com/ozzy-ext-myauth/myauth-lua',
-  tag = 'develop'
+  tag = '1.0.0'
 }
 description = {
   summary = 'Provides authorization for nginx based on config',
