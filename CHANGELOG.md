@@ -4,6 +4,12 @@
 
 Формат лога изменений базируется на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.1] - 2021-01-22
+
+### Добавлено
+
+* `prometheus-event-listener` - слушатель событий авторизации, учитывающий события в метриках для Prometheus. Совместим с [nginx-lua-prometheus](https://github.com/knyar/nginx-lua-prometheus).
+
 ## [1.1.1] - 2021-01-21
 
 ### Изменено 

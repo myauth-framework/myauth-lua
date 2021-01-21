@@ -12,7 +12,7 @@ local notadmin_rbac_header = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3
 local host = "test.host.ru"
 local wrong_host = "test.wrong-host.ru"
 
-local debug_mode = false
+local debug_mode = true
 
 local function create_myauth(config)
   

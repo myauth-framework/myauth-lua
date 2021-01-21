@@ -1,5 +1,5 @@
 local iresty_test = require "resty.iresty_test"
-local tb = iresty_test.new({unit_name="myauth-lua-integration-test"})
+
 local prettyjson = require "resty.prettycjson"
 
 local http = require('socket.http')	
@@ -49,6 +49,10 @@ function check_url(path, expected_code, auth_header, method)
 	check_code(code, expected_code)
 end
 
+---------------------  myauth-lua-integration-test
+
+local tb = iresty_test.new({unit_name="myauth-lua-integration-test"})
+
 function tb:init(  )
 end
 
@@ -84,12 +88,58 @@ function tb:test_should_rbac_allow_for_all()
 	check_url("rbac-access-allow", 200, user2_rbac_header, "POST")
 end
 
+function tb:test_should_detect_notauth_when_wrong_token_sign()
+	check_url("rbac-access-allow", 401, user3_wrongsign_rbac_header, "POST")
+end
+
+function tb:test_should_detect_notauth_when_unsupported_auth_type()
+	check_url("rbac-access-allow", 401, 'Foo token_here', "POST")
+end
+
+function tb:test_should_detect_notauth_when_wrong_token_format()
+	check_url("rbac-access-allow", 401, 'Bearer wrong_token', "POST")
+end
+
+tb:run()
+
+---------------------  myauth-lua-integration-test-metrics
+
+local tbm = iresty_test.new({unit_name="myauth-lua-integration-test-metrics"})
+
 function check_metric(dump, metric)
 
-	if not string.find(tostring(dump), metric) then
+	if not string.find(dump[1], "myauth") then
 		error ("'" .. metric .. "' not found")
 	end
 end
 
--- units test
-tb:run()
+function tbm:init(  )
+end
+
+function tbm:test_should_provide_metrics()
+	local resp = {}
+	local body, code, headers, status = http.request {
+
+		url = "http://myauth-lua-test-server/metrics",
+		sink = ltn12.sink.table(resp) 
+	}
+
+	if (debug_mode) then
+		print('')
+		print('Response: ' .. status)
+		print('')
+		print(resp)
+		print('')
+	end
+
+	check_metric(resp, 'myauth_allow_total{url="/free_for_access",reason="dont_apply_for"}')
+	check_metric(resp, 'myauth_allow_total{url="/rbac-access-1",reason="rbac"}')
+	check_metric(resp, 'myauth_allow_total{url="/rbac-access-allow",reason="rbac"}')
+	check_metric(resp, 'myauth_deny_total{url="/blocked",reason="black_list"}')
+	check_metric(resp, 'myauth_deny_total{url="/rbac-access-1",reason="no_rbac_rules_found"}')
+	check_metric(resp, 'myauth_deny_total{url="/rbac-access-allow",reason="rbac_token_invalid_token_format"}')
+	check_metric(resp, 'myauth_deny_total{url="/rbac-access-allow",reason="rbac_token_invalid_token_sign"}')
+	check_metric(resp, 'myauth_deny_total{url="/rbac-access-allow",reason="unsupported_auth_type"}')
+end
+
+tbm:run()

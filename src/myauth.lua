@@ -82,25 +82,25 @@ end
 function MyAuth:check_anon(url)
   
   if(self._auth_config == nil or self._auth_config.anon == nil) then
-    self._event_listener.on_deny_dueto_no_anon_auth_config(url)
+    self._event_listener:on_deny_dueto_no_anon_auth_config(url)
     self._ngx_strategy.exit_forbidden("There is no anon access in _auth_configuration")
   end
   
   for i, url_pattern in ipairs(self._auth_config.anon) do
     if(self:check_url(url, url_pattern)) then
-      self._event_listener.on_allow_anon(url)
+      self._event_listener:on_allow_anon(url)
       return
     end
   end
 
-  self._event_listener.on_deny_dueto_no_anon_rules_found(url)
+  self._event_listener:on_deny_dueto_no_anon_rules_found(url)
   self._ngx_strategy.exit_forbidden("No allowing rules were found for anon")
 end
 
 function MyAuth:check_basic(url, cred)
 
   if(self._auth_config == null or self._auth_config.basic == nil) then
-    self._event_listener.on_deny_dueto_no_basic_auth_config(url)
+    self._event_listener:on_deny_dueto_no_basic_auth_config(url)
     self._ngx_strategy.exit_forbidden("There's no basic access in _auth_configuration")
   end
 
@@ -110,7 +110,7 @@ function MyAuth:check_basic(url, cred)
     if user.id == user_id then
 
       if user.pass ~= user_pass then
-        self._event_listener.on_deny_dueto_wrong_basic_pass(url, user_id)
+        self._event_listener:on_deny_dueto_wrong_basic_pass(url, user_id)
         self._ngx_strategy.exit_forbidden("Wrong user password")
       end  
 
@@ -120,7 +120,7 @@ function MyAuth:check_basic(url, cred)
 
           self._auth_schema.apply_basic(user_id, self._ngx_strategy)
           
-          self._event_listener.on_allow_basic(url, user_id)
+          self._event_listener:on_allow_basic(url, user_id)
           return
 
         end
@@ -129,7 +129,7 @@ function MyAuth:check_basic(url, cred)
     end
   end
 
-  self._event_listener.on_deny_dueto_no_basic_rules_found(url, user_id)
+  self._event_listener:on_deny_dueto_no_basic_rules_found(url, user_id)
   self._ngx_strategy.exit_forbidden("No allowing rules were found for basic")
 end
 
@@ -137,14 +137,14 @@ function MyAuth:check_rbac_token(url, token, host)
   local token, error_code, error_reason = self._mjwt.authorize(token, host)
 
     if(error_code ~= nil) then
-      self._event_listener.on_deny_rbac_token(url, host, error_code, error_reason)
+      self._event_listener:on_deny_rbac_token(url, host, error_code, error_reason)
     end
 
     if(error_code == 'missing_token') then
       self._ngx_strategy.exit_unauthorized("Missing token")
     end
 
-    if(error_code == 'invalid_token') then
+    if(error_code and string.find(error_code, "invalid_token")) then
       self._ngx_strategy.exit_unauthorized("Invalid token: " .. error_reason)
     end
 
@@ -240,7 +240,7 @@ end
 function MyAuth:check_rbac(url, http_method, token, host)
 
   if(self._auth_config == null or self._auth_config.rbac == nil or self._auth_config.rbac.rules == nil) then
-    self._event_listener.on_deny_dueto_no_rbac_config(url)
+    self._event_listener:on_deny_dueto_no_rbac_config(url)
     self._ngx_strategy.exit_forbidden("There's no rbac access in configuration")
   end
 
@@ -254,14 +254,14 @@ function MyAuth:check_rbac(url, http_method, token, host)
   end
 
   if not check_result then
-    self._event_listener.on_deny_no_rbac_rules_found(url, http_method, token_obj.payload.sub)
+    self._event_listener:on_deny_no_rbac_rules_found(url, http_method, token_obj.payload.sub)
     self._ngx_strategy.exit_forbidden("No allowing rules were found for bearer")
   else
     local claims = self._mjwt.get_token_biz_claims(token_obj)
     self._auth_schema.apply_rbac(claims, self._ngx_strategy)
   end 
 
-  self._event_listener.on_allow_rbac(url, http_method, token_obj.payload.sub)
+  self._event_listener:on_allow_rbac(url, http_method, token_obj.payload.sub)
 end
 
 function MyAuth:authorize()
@@ -297,17 +297,17 @@ function MyAuth:authorize_core(url, http_method, auth_header, host_header)
   end
 
   if self:check_dont_apply_for(url) then
-    self._event_listener.on_allow_dueto_dont_apply_for(url)    
+    self._event_listener:on_allow_dueto_dont_apply_for(url)    
     return
   end
 
   if self._auth_config.only_apply_for ~= nil and not self:check_only_apply_for(url) then
-    self._event_listener.on_allow_dueto_only_apply_for(url)
+    self._event_listener:on_allow_dueto_only_apply_for(url)
     return
   end
 
   if self:check_black_list(url) then
-    self._event_listener.on_deny_dueto_black_list(url)
+    self._event_listener:on_deny_dueto_black_list(url)
     self._ngx_strategy.exit_forbidden("Specified url was found in black list")
   end
 
@@ -328,9 +328,9 @@ function MyAuth:authorize_core(url, http_method, auth_header, host_header)
   	return
 	end
 
-  self._event_listener.on_deny_dueto_unsupported_auth_type(url, auth_header)
+  self._event_listener:on_deny_dueto_unsupported_auth_type(url, auth_header)
   print("Auth header: " .. auth_header)
-  self._ngx_strategy.exit_forbidden("Unsupported authorization type")
+  self._ngx_strategy.exit_unauthorized("Unsupported authorization type")
 end
 
 function MyAuth.new(config, secrets, event_listener, nginx_strategy)
@@ -339,7 +339,7 @@ function MyAuth.new(config, secrets, event_listener, nginx_strategy)
 
   new_obj._auth_config = config
   new_obj._ngx_strategy = nginx_strategy or require "myauth.nginx"
-  new_obj._event_listener = event_listener or require "myauth.empty-event-listener"
+  new_obj._event_listener = event_listener or require "myauth.empty-event-listener".new()
   new_obj._mjwt = require "myauth.jwt"
   
   new_obj._mjwt.secret = secrets.jwt_secret
@@ -348,9 +348,7 @@ function MyAuth.new(config, secrets, event_listener, nginx_strategy)
     new_obj._mjwt.ignore_audience = config.rbac.ignore_audience
   end
 
-  if config.debug == true then
-    new_obj._ngx_strategy.debug = true
-  end
+  new_obj._ngx_strategy.debug_mode = config.debug_mode
 
   return new_obj;
 end
