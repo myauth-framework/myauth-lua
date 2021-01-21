@@ -209,8 +209,7 @@ jwt_secret = "some-secret"
   	local config = require "myauth.config".load("/app/configs/auth-config.lua")
   	local secrets = require "myauth.secrets".load("/app/configs/auth-secrets.lua")
   
-  	a = require "myauth"
-  	a.initialize(config, secrets)
+  	a = require "myauth".new(config, secrets)
   }
   
   server {
@@ -224,7 +223,7 @@ jwt_secret = "some-secret"
   location / {
   
       access_by_lua_block {
-      	a.authorize()
+      	a:authorize()
       }
       proxy_pass http://...;		
   }
@@ -289,7 +288,7 @@ local secrets = require "myauth.secrets".load('/path/to/secrets.lua')
 
 ### myauth
 
-#### initialize(init_config, init_secrets)
+#### new(init_config, init_secrets [, event_listener] [, nginx_strategy])
 
 Инициализирует модуль авторизации.
 
@@ -297,8 +296,7 @@ local secrets = require "myauth.secrets".load('/path/to/secrets.lua')
 local config = require "myauth.config".load("/app/configs/auth-config.lua")
 local secrets = require "myauth.secrets".load("/app/configs/auth-secrets.lua")
 
-a = require "myauth"
-a.initialize(config, secrets)
+a = require "myauth".new(config, secrets)
 ```
 
  #### authorize()
@@ -314,24 +312,24 @@ server {
     
 		access_by_lua_block {
 
-			a.authorize()
+			a:authorize()
 		}
 		proxy_pass ...;		
 	}
 }
 ```
 
-#### event_listener
-
-Устанавливает слушатель событий авторизации. 
-
-```lua
-auth.event_listener = require "myauth.empty-event-listener"
-```
-
 ### event_listener
 
 Слушатель событий авторизации. Получает вызовы от модуля авторизации при возникновении событий авторизации.
+
+```lua
+local config = ...
+local secrets = ...
+local event_listener = require "myauth.empty-event-listener"
+
+a = require "myauth".new(config, secrets, event_listener)
+```
 
 #### on_allow_dueto_dont_apply_for(url)
 

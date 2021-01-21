@@ -14,23 +14,23 @@ local wrong_host = "test.wrong-host.ru"
 
 local debug_mode = false
 
-local function create_m(config)
-  local m = require "myauth"
-  m.strategy = require "stuff.myauth-test-nginx" 
-  m.strategy.debug_mode = debug_mode
+local function create_myauth(config)
+  
+  -- print(require "cjson".encode(config)) 
+
+  local ngx_strategy = require "stuff.myauth-test-nginx";
+  local secrets = { jwt_secret="qwerty" }
+  local event_listener = nil
 
   if(debug_mode) then
-    m.event_listener = require "stuff.test-event-listener"
+    event_listener = require "stuff.test-event-listener"
   end
-
-  local secrets = { jwt_secret="qwerty" }
-
-  m.initialize(config, secrets)
-  return m
+  
+  return require "myauth".new(config, secrets, event_listener, ngx_strategy)
 end
 
 local function should_error(m, ...)
-  local v, err = pcall(m.authorize_core, ...)
+  local v, err = pcall(m.authorize_core, m, ...)
   if v then
       error("No expected error")
    else
@@ -41,9 +41,14 @@ local function should_error(m, ...)
 end
 
 local function should_pass_rbac(m, ...)
-  local v, err = pcall(m.authorize_core, ...);
+
+  local v, err = pcall(m.authorize_core, m, ...);
   if not v then
-    error("Error: " .. err .. ". Debug: " .. m.strategy.debug_rbac_info)
+    if m._ngx_strategy.debug_rbac_info ~= nil then
+      error("Error: " .. err .. ". Debug: " .. m._ngx_strategy.debug_rbac_info)
+    else
+      error("Error: " .. err)
+    end
   end
 end
 
@@ -55,8 +60,8 @@ function tb:test_should_pass_anon()
     debug_mode=debug_mode,
     anon = { "/foo" }
   }
-  local m = create_m(config)
-  m.authorize_core("/foo")
+  local m = create_myauth(config)
+  m:authorize_core("/foo")
 end
 
 function tb:test_should_fail_anon_if_url_not_defined()
@@ -64,7 +69,7 @@ function tb:test_should_fail_anon_if_url_not_defined()
     debug_mode=debug_mode,
     anon = { "/foo" }
   }
-  local m = create_m(config)
+  local m = create_myauth(config)
   should_error(m, "/bar")
 end
 
@@ -79,8 +84,8 @@ function tb:test_should_pass_basic()
       }
     },
   }
-  local m = create_m(config)
-  m.authorize_core("/basic-access-1", "GET", user1_basic_header)
+  local m = create_myauth(config)
+  m:authorize_core("/basic-access-1", "GET", user1_basic_header)
 end
 
 function tb:test_should_fail_basic_if_url_not_defined()
@@ -94,7 +99,7 @@ function tb:test_should_fail_basic_if_url_not_defined()
       }
     },
   }
-  local m = create_m(config)
+  local m = create_myauth(config)
   should_error(m, "/basic-access-notdigit", "GET", user1_basic_header)
 end
 
@@ -109,7 +114,7 @@ function tb:test_should_fail_basic_if_wrong_user_defined()
       }
     },
   }
-  local m = create_m(config)
+  local m = create_myauth(config)
   should_error(m, "/basic-access-notdigit", "GET", user2_basic_header)
 end
 
@@ -125,7 +130,7 @@ function tb:test_should_pass_rbac()
       }
     }
   }
-  local m = create_m(config)
+  local m = create_myauth(config)
   should_pass_rbac(m, "/bearer-access-1", "GET", admin_rbac_header, host)
 end
 
@@ -141,7 +146,7 @@ function tb:test_should_pass_rbac_for_spetial_method()
       }
     }
   }
-  local m = create_m(config)
+  local m = create_myauth(config)
   should_pass_rbac(m, "/bearer-access-1", "POST", admin_rbac_header, host)
 end
 
@@ -157,7 +162,7 @@ function tb:test_should_fail_rbac_if_url_not_defined()
       }
     }
   }
-  local m = create_m(config)
+  local m = create_myauth(config)
   should_error(m, "/bearer-access-notdigit", "GET", admin_rbac_header, host)
 end
 
@@ -173,7 +178,7 @@ function tb:test_should_fail_rbac_if_role_absent()
       }
     }
   }
-  local m = create_m(config)
+  local m = create_myauth(config)
   should_error(m, "/bearer-access-1", "GET", notadmin_rbac_header, host)
 end
 
@@ -189,7 +194,7 @@ function tb:test_should_fail_rbac_if_wrong_host()
       }
     }
   }
-  local m = create_m(config)
+  local m = create_myauth(config)
   should_error(m, "/bearer-access-1", "GET", admin_rbac_header, wrong_host)
 end
 
@@ -206,7 +211,7 @@ function tb:test_should_fail_rbac_if_wrong_sign()
       }
     }
   }
-  local m = create_m(config)
+  local m = create_myauth(config)
   should_error(m, "/bearer-access-1", "GET", admin_rbac_header_wrong_sign, host)
 end
 
@@ -226,7 +231,7 @@ function tb:test_should_fail_rbac_if_in_black_list()
       }
     }
   }
-  local m = create_m(config)
+  local m = create_myauth(config)
   should_error(m, "/bearer-access-1", "GET", admin_rbac_header, host)
 end
 
@@ -248,7 +253,7 @@ function tb:test_should_dont_authorize_when_in_dont_apply_for()
       }
     }
   }
-  local m = create_m(config)
+  local m = create_myauth(config)
   should_pass_rbac(m, "/bearer-access-nodigit", "GET", admin_rbac_header, host)
 end
 
@@ -267,7 +272,7 @@ function tb:test_should_dont_authorize_when_not_in_only_apply_for()
       }
     }
   }
-  local m = create_m(config)
+  local m = create_myauth(config)
   should_pass_rbac(m, "/bearer-access-nodigit", "GET", admin_rbac_header, host)
 end
 
@@ -283,7 +288,7 @@ function tb:test_should_pass_when_allow_for_all()
       }
     }
   }
-  local m = create_m(config)
+  local m = create_myauth(config)
   should_pass_rbac(m, "/bearer-access-1", "GET", admin_rbac_header, host)
 end
 

@@ -1,19 +1,15 @@
 -- myauth.lua
 
-local _M = {}
+require "base64"
+require "cjson"
+require "myauth.jwt"
+require "myauth.nginx"
+require "myauth.empty-event-listener"
 
-_M.strategy = require "myauth.nginx"
+local MyAuth = {}
+local mt = { __index = MyAuth }
 
-_M.event_listener = require "myauth.empty-event-listener"
-
-local base64 = require "base64"
-local cjson = require "cjson"
-local mjwt = require "myauth.jwt"
-local auth_schema = nil
-
-local config = nil
-
-local function check_url(url, pattern)
+function MyAuth:check_url(url, pattern)
 
   local norm_pattern, _ = string.gsub(pattern, "-", "%%-")
   norm_pattern, _ = string.gsub(norm_pattern, "%%%%%-", "%%-")
@@ -21,11 +17,12 @@ local function check_url(url, pattern)
 
 end
 
-local function check_dont_apply_for(url)
-  if config.dont_apply_for ~= nil then
+function MyAuth:check_dont_apply_for(url)
+  
+  if self._auth_config.dont_apply_for ~= nil then
 
-    for i, url_pattern in ipairs(config.dont_apply_for) do
-        if check_url(url, url_pattern) then
+    for i, url_pattern in ipairs(self._auth_config.dont_apply_for) do
+        if self:check_url(url, url_pattern) then
             return true
         end
     end
@@ -34,11 +31,11 @@ local function check_dont_apply_for(url)
   return false
 end
 
-local function check_only_apply_for(url)
-  if config.only_apply_for ~= nil then
+function MyAuth:check_only_apply_for(url)
+  if self._auth_config.only_apply_for ~= nil then
 
-    for i, url_pattern in ipairs(config.only_apply_for) do
-        if check_url(url, url_pattern) then
+    for i, url_pattern in ipairs(self._auth_config.only_apply_for) do
+        if self:check_url(url, url_pattern) then
             return true
         end
     end
@@ -47,11 +44,11 @@ local function check_only_apply_for(url)
   return false
 end
 
-local function check_black_list(url)
-  if config.black_list ~= nil then
+function MyAuth:check_black_list(url)
+  if self._auth_config.black_list ~= nil then
 
-    for i, url_pattern in ipairs(config.black_list) do
-        if check_url(url, url_pattern) then
+    for i, url_pattern in ipairs(self._auth_config.black_list) do
+        if self:check_url(url, url_pattern) then
             return true
         end
     end
@@ -60,7 +57,7 @@ local function check_black_list(url)
   return false
 end
 
-local function has_value (tab, val)
+function MyAuth:has_value (tab, val)
   
   if tab == nil then
     return false
@@ -74,56 +71,56 @@ local function has_value (tab, val)
   return false
 end
 
-local function get_basic_user(value)
+function MyAuth:get_basic_user(value)
 
-  local decoded = base64.decode(value)
+  local decoded = require "base64".decode(value)
   local sep_index = decoded:find(":")
   return decoded:sub(1, sep_index-1), decoded:sub(sep_index+1)
 
 end
 
-local function check_anon(url)
+function MyAuth:check_anon(url)
   
-  if(config == nil or config.anon == nil) then
-    _M.event_listener.on_deny_dueto_no_anon_config(url)
-    _M.strategy.exit_forbidden("There is no anon access in configuration")
+  if(self._auth_config == nil or self._auth_config.anon == nil) then
+    self._event_listener.on_deny_dueto_no_anon_auth_config(url)
+    self._ngx_strategy.exit_forbidden("There is no anon access in _auth_configuration")
   end
   
-  for i, url_pattern in ipairs(config.anon) do
-    if(check_url(url, url_pattern)) then
-      _M.event_listener.on_allow_anon(url)
+  for i, url_pattern in ipairs(self._auth_config.anon) do
+    if(self:check_url(url, url_pattern)) then
+      self._event_listener.on_allow_anon(url)
       return
     end
   end
 
-  _M.event_listener.on_deny_dueto_no_anon_rules_found(url)
-  _M.strategy.exit_forbidden("No allowing rules were found for anon")
+  self._event_listener.on_deny_dueto_no_anon_rules_found(url)
+  self._ngx_strategy.exit_forbidden("No allowing rules were found for anon")
 end
 
-local function check_basic(url, cred)
+function MyAuth:check_basic(url, cred)
 
-  if(config == null or config.basic == nil) then
-    _M.event_listener.on_deny_dueto_no_basic_config(url)
-    _M.strategy.exit_forbidden("There's no basic access in configuration")
+  if(self._auth_config == null or self._auth_config.basic == nil) then
+    self._event_listener.on_deny_dueto_no_basic_auth_config(url)
+    self._ngx_strategy.exit_forbidden("There's no basic access in _auth_configuration")
   end
 
-  local user_id, user_pass = get_basic_user(cred)
+  local user_id, user_pass = self:get_basic_user(cred)
 
-  for i, user in ipairs(config.basic) do
+  for i, user in ipairs(self._auth_config.basic) do
     if user.id == user_id then
 
       if user.pass ~= user_pass then
-        _M.event_listener.on_deny_dueto_wrong_basic_pass(url, user_id)
-        _M.strategy.exit_forbidden("Wrong user password")
+        self._event_listener.on_deny_dueto_wrong_basic_pass(url, user_id)
+        self._ngx_strategy.exit_forbidden("Wrong user password")
       end  
 
       for i, url_pattern in ipairs(user.urls) do
 
-        if check_url(url, url_pattern) then
+        if self:check_url(url, url_pattern) then
 
-          auth_schema.apply_basic(user_id, _M.strategy)
+          self._auth_schema.apply_basic(user_id, self._ngx_strategy)
           
-          _M.event_listener.on_allow_basic(url, user_id)
+          self._event_listener.on_allow_basic(url, user_id)
           return
 
         end
@@ -132,43 +129,47 @@ local function check_basic(url, cred)
     end
   end
 
-  _M.event_listener.on_deny_dueto_no_basic_rules_found(url, user_id)
-  _M.strategy.exit_forbidden("No allowing rules were found for basic")
+  self._event_listener.on_deny_dueto_no_basic_rules_found(url, user_id)
+  self._ngx_strategy.exit_forbidden("No allowing rules were found for basic")
 end
 
-local function check_rbac_token(url, token, host)
-  local token, error_code, error_reason = mjwt.authorize(token, host)
+function MyAuth:check_rbac_token(url, token, host)
+  local token, error_code, error_reason = self._mjwt.authorize(token, host)
 
     if(error_code ~= nil) then
-      _M.event_listener.on_deny_rbac_token(url, host, error_code, error_reason)
+      self._event_listener.on_deny_rbac_token(url, host, error_code, error_reason)
     end
 
-    if(res == 'missing_token') then
-      _M.strategy.exit_unauthorized("Missing token")
+    if(error_code == 'missing_token') then
+      self._ngx_strategy.exit_unauthorized("Missing token")
     end
 
-    if(res == 'invalid_token') then
-      _M.strategy.exit_unauthorized("Invalid token: " .. error_reason)
+    if(error_code == 'invalid_token') then
+      self._ngx_strategy.exit_unauthorized("Invalid token: " .. error_reason)
     end
 
-    if(res == 'invalid_audience') then
-      _M.strategy.exit_unauthorized("Invalid audience: " .. error_reason)
+    if(error_code == 'invalid_audience') then
+      self._ngx_strategy.exit_unauthorized("Invalid audience: " .. error_reason)
     end
 
-    if(res == 'no_host') then
-      _M.strategy.exit_unauthorized(error_reason)
+    if(error_code == 'no_host') then
+      self._ngx_strategy.exit_unauthorized(error_reason)
+    end
+
+    if(error_code ~= nil) then
+      error("Unexpected  error code: " .. error_code)
     end
 
     return token
 end
 
-local function check_rbac_roles(url, http_method, token_roles)
+function MyAuth:check_rbac_roles(url, http_method, token_roles)
 
   local calc_rules = {}
   local rules_factors = {}
 
-  for _, rule in ipairs(config.rbac.rules) do
-    if(check_url(url, rule.url)) then
+  for _, rule in ipairs(self._auth_config.rbac.rules) do
+    if(self:check_url(url, rule.url)) then
 
       local calc_rule = { 
         pattern = rule.url,
@@ -182,14 +183,14 @@ local function check_rbac_roles(url, http_method, token_roles)
         table.insert(factors, true)
       else
         for _, rl in ipairs(token_roles) do
-          if has_value(rule.allow, rl) then
+          if self:has_value(rule.allow, rl) then
             calc_rule.allow = rl
             table.insert(factors, true)
             break
           end
         end
         for _, rl in ipairs(token_roles) do
-          if has_value(rule.deny, rl) then
+          if self:has_value(rule.deny, rl) then
             calc_rule.deny = rl
             table.insert(factors, false)
             break
@@ -198,7 +199,7 @@ local function check_rbac_roles(url, http_method, token_roles)
         for _, rl in ipairs(token_roles) do
           local method_allow_list_name = "allow_" .. string.lower(http_method)
           local method_allow_list = rule[method_allow_list_name]
-          if method_allow_list ~= nil and has_value(method_allow_list, rl) then
+          if method_allow_list ~= nil and self:has_value(method_allow_list, rl) then
             calc_rule[method_allow_list_name] = rl
             table.insert(factors, true)
           end
@@ -206,17 +207,17 @@ local function check_rbac_roles(url, http_method, token_roles)
         for _, rl in ipairs(token_roles) do
           local method_deny_list_name = "deny_" .. string.lower(http_method)
           local method_deny_list = rule[method_deny_list_name]
-          if method_deny_list ~= nil and has_value(method_deny_list, rl) then
+          if method_deny_list ~= nil and self:has_value(method_deny_list, rl) then
             calc_rule[method_deny_list_name] = rl
             table.insert(factors, false)
           end
         end
       end
 
-      if has_value(factors, false) then
+      if self:has_value(factors, false) then
         calc_rule.total_factor = false
         table.insert(rules_factors, false)
-      elseif has_value(factors, true) then
+      elseif self:has_value(factors, true) then
         calc_rule.total_factor = true
         table.insert(rules_factors, true)
       else
@@ -228,81 +229,66 @@ local function check_rbac_roles(url, http_method, token_roles)
     end
   end
 
-  local hasDenies = has_value(rules_factors, false);
-  local hasAllows = has_value(rules_factors, true);
+  local hasDenies = self:has_value(rules_factors, false);
+  local hasAllows = self:has_value(rules_factors, true);
 
   local total_result = not hasDenies and hasAllows
 
   return total_result, { rules = calc_rules, roles = token_roles, method = http_method, url = url }
 end
 
-local function check_rbac(url, http_method, token, host)
+function MyAuth:check_rbac(url, http_method, token, host)
 
-  if(config == null or config.rbac == nil or config.rbac.rules == nil) then
-    _M.event_listener.on_deny_dueto_no_rbac_config(url)
-    _M.strategy.exit_forbidden("There's no rbac access in configuration")
+  if(self._auth_config == null or self._auth_config.rbac == nil or self._auth_config.rbac.rules == nil) then
+    self._event_listener.on_deny_dueto_no_rbac_config(url)
+    self._ngx_strategy.exit_forbidden("There's no rbac access in configuration")
   end
 
-  local token_obj = check_rbac_token(url, token, host)
-  local token_roles = mjwt.get_token_roles(token_obj)
-  local check_result, debug_info = check_rbac_roles(url, http_method, token_roles)
+  local token_obj = self:check_rbac_token(url, token, host)
+  local token_roles = self._mjwt.get_token_roles(token_obj)
+  local check_result, debug_info = self:check_rbac_roles(url, http_method, token_roles)
 
-  if config.debug_mode then
-    local debug_info_str = cjson.encode(debug_info)
-    _M.strategy.set_debug_rbac_header(debug_info_str)
+  if self._auth_config.debug_mode then
+    local debug_info_str = require "cjson".encode(debug_info)
+    self._ngx_strategy.set_debug_rbac_header(debug_info_str)
   end
 
   if not check_result then
-    _M.event_listener.on_deny_no_rbac_rules_found(url, http_method, token_obj.payload.sub)
-    _M.strategy.exit_forbidden("No allowing rules were found for bearer")
+    self._event_listener.on_deny_no_rbac_rules_found(url, http_method, token_obj.payload.sub)
+    self._ngx_strategy.exit_forbidden("No allowing rules were found for bearer")
   else
-    local claims = mjwt.get_token_biz_claims(token_obj)
-    auth_schema.apply_rbac(claims, _M.strategy)
+    local claims = self._mjwt.get_token_biz_claims(token_obj)
+    self._auth_schema.apply_rbac(claims, self._ngx_strategy)
   end 
 
-  _M.event_listener.on_allow_rbac(url, http_method, token_obj.payload.sub)
+  self._event_listener.on_allow_rbac(url, http_method, token_obj.payload.sub)
 end
 
-function _M.initialize(init_config, init_secrets)
-
-  config = init_config
-  mjwt.secret = init_secrets.jwt_secret
-
-  if init_config.rbac ~= nil then
-    mjwt.ignore_audience = init_config.rbac.ignore_audience
-  end
-
-  if init_config.debug_mode == true then
-    _M.strategy.debug_mode = true
-  end
-
-end
-
-function _M.authorize()
+function MyAuth:authorize()
 
   local auth_header = ngx.var.http_Authorization
 	local host_header = ngx.var.http_Host
   local http_method = ngx.var.request_method;
   local url = ngx.var.request_uri
   
-  _M.authorize_core(url, http_method, auth_header, host_header)
+  self:authorize_core(url, http_method, auth_header, host_header)
 
   ngx.exit(ngx.OK)
 end
 
-function _M.authorize_core(url, http_method, auth_header, host_header)
+function MyAuth:authorize_core(url, http_method, auth_header, host_header)
 
-  if config == nil then
-    error("MyAuth config was not loaded")
+  if self._auth_config == nil then
+    error("MyAuth auth_config was not loaded")
   end
 
-  if config.output_schema == "myauth2" or config.output_schema == nil then
+  if self._auth_config.output_schema == "myauth2" or self._auth_config.output_schema == nil then
 
-    auth_schema = require "myauth.scheme-v2"
+    self._auth_schema = require "myauth.scheme-v2"
 
-  elseif config.output_schema == "myauth1" then
+  elseif _auth_config.output_schema == "myauth1" then
 
-    auth_schema = require "myauth.scheme-v1"
+    self._auth_schema = require "myauth.scheme-v1"
 
   else
 
@@ -310,41 +296,64 @@ function _M.authorize_core(url, http_method, auth_header, host_header)
 
   end
 
-  if check_dont_apply_for(url) then
-    _M.event_listener.on_allow_dueto_dont_apply_for(url)    
+  if self:check_dont_apply_for(url) then
+    self._event_listener.on_allow_dueto_dont_apply_for(url)    
     return
   end
 
-  if config.only_apply_for ~= nil and not check_only_apply_for(url) then
-    _M.event_listener.on_allow_dueto_only_apply_for(url)
+  if self._auth_config.only_apply_for ~= nil and not self:check_only_apply_for(url) then
+    self._event_listener.on_allow_dueto_only_apply_for(url)
     return
   end
 
-  if check_black_list(url) then
-    _M.event_listener.on_deny_dueto_black_list(url)
-    _M.strategy.exit_forbidden("Specified url was found in black list")
+  if self:check_black_list(url) then
+    self._event_listener.on_deny_dueto_black_list(url)
+    self._ngx_strategy.exit_forbidden("Specified url was found in black list")
   end
 
   if auth_header == nil then
-    check_anon(url)
+    self:check_anon(url)
     return
 	end
 
 	local _, _, token = string.find(auth_header, "Bearer%s+(.+)")
 	if token ~= nil then
-  	check_rbac(url, http_method, token, host_header)
+  	self:check_rbac(url, http_method, token, host_header)
   	return
 	end
 
 	local _, _, basic = string.find(auth_header, "Basic%s+(.+)")
 	if basic ~= nil then
-  	check_basic(url, basic)
+  	self:check_basic(url, basic)
   	return
 	end
 
-  _M.event_listener.on_deny_dueto_unsupported_auth_type(url, auth_header)
+  self._event_listener.on_deny_dueto_unsupported_auth_type(url, auth_header)
   print("Auth header: " .. auth_header)
-  _M.strategy.exit_forbidden("Unsupported authorization type")
+  self._ngx_strategy.exit_forbidden("Unsupported authorization type")
 end
 
-return _M;
+function MyAuth.new(config, secrets, event_listener, nginx_strategy)
+
+  local new_obj = setmetatable({}, mt)
+
+  new_obj._auth_config = config
+  new_obj._ngx_strategy = nginx_strategy or require "myauth.nginx"
+  new_obj._event_listener = event_listener or require "myauth.empty-event-listener"
+  new_obj._mjwt = require "myauth.jwt"
+  
+  new_obj._mjwt.secret = secrets.jwt_secret
+
+  if config.rbac ~= nil then
+    new_obj._mjwt.ignore_audience = config.rbac.ignore_audience
+  end
+
+  if config.debug == true then
+    new_obj._ngx_strategy.debug = true
+  end
+
+  return new_obj;
+end
+
+
+return MyAuth;
