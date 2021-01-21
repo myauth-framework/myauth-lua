@@ -3,6 +3,8 @@
 
 local _M = {}
 
+_M.module_name = "myauth.nginx"
+
 _M.debug_mode = false
 
 function _M.set_debug_rbac_header(info)
