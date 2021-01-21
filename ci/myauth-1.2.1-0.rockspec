@@ -1,9 +1,9 @@
 rockspec_format = '3.0'
 package = 'myauth'
-version = '1.1.1-0'
+version = '1.2.1-0'
 source = {
   url = 'git://github.com/ozzy-ext-myauth/myauth-lua',
-  tag = '1.1.1'
+  tag = '1.2.1'
 }
 description = {
   summary = 'LUA library with myauth verification logic',
@@ -32,5 +32,6 @@ build = {
     ['myauth.scheme-v2'] = 'src/myauth/scheme-v2.lua',
     ['myauth.secrets'] = 'src/myauth/secrets.lua',
     ['myauth.empty-event-listener'] = 'src/myauth/empty-event-listener.lua',
+    ['myauth.prometheus-event-listener'] = 'src/myauth/prometheus-event-listener.lua'
   }
 }

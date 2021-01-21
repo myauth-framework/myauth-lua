@@ -1,4 +1,4 @@
-# MyAuth.Proxy 
+# myauth-lua
 
 [![Lua rocks](https://img.shields.io/luarocks/v/ozzy-ext/myauth)](https://luarocks.org/modules/ozzy-ext/myauth)
 
@@ -204,12 +204,12 @@ jwt_secret = "some-secret"
 * на уровне http разместить блок инициализации
 
   ```nginx
-  init_by_lua_block {
+  init_worker_by_lua_block {
   	
   	local config = require "myauth.config".load("/app/configs/auth-config.lua")
   	local secrets = require "myauth.secrets".load("/app/configs/auth-secrets.lua")
   
-  	a = require "myauth".new(config, secrets)
+  	myauth = require "myauth".new(config, secrets)
   }
   
   server {
@@ -223,7 +223,7 @@ jwt_secret = "some-secret"
   location / {
   
       access_by_lua_block {
-      	a:authorize()
+      	myauth:authorize()
       }
       proxy_pass http://...;		
   }
@@ -312,7 +312,7 @@ server {
     
 		access_by_lua_block {
 
-			a:authorize()
+			myauth:authorize()
 		}
 		proxy_pass ...;		
 	}
@@ -328,7 +328,7 @@ local config = ...
 local secrets = ...
 local event_listener = require "myauth.empty-event-listener"
 
-a = require "myauth".new(config, secrets, event_listener)
+myauth = require "myauth".new(config, secrets, event_listener)
 ```
 
 #### on_allow_dueto_dont_apply_for(url)
@@ -461,9 +461,140 @@ a = require "myauth".new(config, secrets, event_listener)
 * `host`- host, указанный в запросе
 * `error_code` - код ошибки:
   *  `missing_token` - токен не указан
-  * `invalid_token` - токен имеет невалидный формат токена или некорректная подпись
+  * `invalid_token_sign` - токен имеет некорректную подпись
+  * `invalid_token_format` - токен имеет неверный формат
+  * `invalid_token` - некорректный токен (остальные причины)
   * `invalid_audience`  - нецелевое использование
-  * `no_host` - не указан хост запроса, нужный для проверки цели использования
+  * `no_host` - не указан хост запроса, необходимый для проверки цели использования
+
+## Метрики
+
+### Применение
+
+`myauth-lua` в составе содержит модуль `myauth.prometheus-event-listener`. Этот модуль позволяет вести метрики событий авторизации. 
+
+Ниже приведён пример создания объекта проверки авторизации `myauth` с передачей ему слушателя событий авторизации `event_listener` для ведения метрик событий авторизации.
+
+```lua
+local config = ...
+local secrets = ...
+local prometheus = require("prometheus").init(....) 
+...
+
+local event_listener = require "myauth.prometheus-event-listener".new(prometheus)
+
+myauth = require "myauth".new(config, secrets, event_listener)
+```
+
+Объект `prometheus` - модуль [nginx-lua-prometheus](https://github.com/knyar/nginx-lua-prometheus) или совместимый по интерфейсу объект.
+
+### Метрики
+
+Метрики авторизации:
+
+* `myauth_allow_total{"url", "reason"}` - счётчик. Общее количество запросов с разрешённым доступом
+  * `url` - путь запроса
+  *  `reason` - литеральный идентификатор причины разрешения
+    * `dont_apply_for` - разрешение доступа по причине нахождения `url` в списке путей, не подлежащих проверке
+    * `only_apply_for` - разрешение доступа по причине отсутствия `url` в списке путей, подлежащих проверке
+    * `anon` - разрешение анонимного доступа
+    * `basic` - разрешение доступа с `basic` авторизацией
+    * `rbac` - разрешение доступа с `bearer` авторизацией по `rbac` правилу
+* `myauth_deny_total{"url", "reason"}` - счётчик. Общее количество запросов с запрещённым доступом
+  * `url` - путь запроса
+  *  `reason` - литеральный идентификатор причины запрета
+    * `black_list` - запрет доступа по причине нахождения `url` в чёрном списке путей
+    * `unsupported_auth_type` - запрет доступа из-за неуказанного или неожиданного типа авторизации
+    * `no_anon_rules_found` - запрет анонимного доступа по причине отсутствия `url` в списке путей с разрешённым анонимным доступом
+    * `no_anon_config` - запрет анонимного доступа по причине отсутствия в конфигурации списка путей с разрешённым анонимным доступом
+    * `no_basic_config` - запрет доступа с `basic` авторизацией по причине отсутствия в конфигурации информации о `basic` авторизации
+    * `wrong_basic_pass` - запрет доступа с `basic` авторизацией по причине неправильного пароля
+    * `no_basic_rules_found` - запрет доступа с `basic` авторизацией по причине отсутствия правила `basic` авторизации для указанного пути и пользователя
+    * `no_rbac_config` - запрет доступа с `bearer` авторизацией по причине отсутствия в конфигурации информации о `rbac` авторизации
+    * `no_rbac_rules_found` - запрет доступа с `bearer` авторизацией по причине отсутствия правила `rbac` авторизации для указанного пути, `http`-метода и субъекта
+    * `rbac_token_missing_token` - запрет доступа с `bearer` авторизацией по причине того, что токен не указан
+    * `rbac_token_invalid_token_sign` - запрет доступа с `bearer` авторизацией по причине того, что токен имеет некорректную подпись
+    * `rbac_token_invalid_token_format` - запрет доступа с `bearer` авторизацией по причине того, что токен имеет неверный формат
+    * `rbac_token_invalid_token` - запрет доступа с `bearer` авторизацией по причине того, что токен не прошёл проверку (другие причины)
+    * `rbac_token_invalid_audience` - запрет доступа с `bearer` авторизацией по причине нецелевого использования токена
+    * `rbac_token_no_host` - запрет доступа с `bearer` авторизацией по причине того, что не указан хост запроса, необходимый для проверки цели использования
+
+## Особенности реализации схем аутентификации
+
+### MyAuth v1
+
+#### Basic
+
+При `Basic` аутентификации, в результирующий заголовок авторизации попадает только идентификатор пользователя под именем `sub`(subject, по аналогии с тем, как этот параметр называется в `jwt`). Пример заголовка авторизации для пользователя `foo-user`:
+
+```
+Authorization: MyAuth1 sub="foo-user"
+```
+
+#### Bearer
+
+При `Bearer` аутентификации с `jwt` токеном, все утверждения из токена попадают в заголовок авторизации со своими именами.
+
+### MyAuth v2
+
+#### Basic
+
+При `Basic` аутентификации, кроме заголовка авторизации, добавляется только заголовок с идентификатором пользователя `X-Claim-User-Id`. Пример заголовка авторизации для пользователя `foo-user`:
+
+```
+Authorization: MyAuth2
+X-Claim-User-Id: foo-user
+```
+
+#### Bearer
+
+##### Имена заголовков
+
+При `Bearer` аутентификации с `jwt` токеном, кроме заголовка авторизации, все утверждения из токена добавляются в перенаправленный запрос в виде заголовков с префиксом `X-Claim-<нормализованный_тип_утверждения>`. 
+
+Нормализация типа утверждения:
+
+* заменяет разделитель `:` на `-`;
+* первые буквы разделённых слов переводи в верхний регистр.
+
+Пример утверждений:
+
+```
+MyClaim1 = val1
+myClaim2 = val2
+my-claim-3 = val3 
+my:claim:4 = val4
+```
+
+Заголовки перенаправленного запроса по этим утверждениям:
+
+```
+Authorization: MyAuth2
+X-Claim-MyClaim1: val1
+X-Claim-MyClaim2: val2
+X-Claim-My-Claim-3: val3
+X-Claim-My-Claim-4: val4
+```
+
+##### Зарезервированные заголовки
+
+Для следующих утверждений используются фиксированные имена заголовков:
+
+* `sub` -> `X-Claim-User-Id`;
+* `roles` -> `X-Claim-Roles`;
+* `role` -> `X-Claim-Role`;
+* `http://schemas.microsoft.com/ws/2008/06/identity/claims/role` -> `X-Claim-Role`;
+
+##### Утверждения-массивы
+
+Утверждения-массивы из `jwt` токена сериализуются в строку, где значения массива разделены запятыми. 
+
+Пример: 
+
+```
+Authorization: MyAuth2
+X-Claim-Roles: admin,user
+```
 
 ## Отладка 
 
@@ -572,81 +703,3 @@ debug_mode=true
 #### X-Debug-Msg
 
 Передаёт сообщение от логики авторизации, поясняющее статус ответа.
-
-## Особенности реализации схем аутентификации
-
-### MyAuth v1
-
-#### Basic
-
-При `Basic` аутентификации, в результирующий заголовок авторизации попадает только идентификатор пользователя под именем `sub`(subject, по аналогии с тем, как этот параметр называется в `jwt`). Пример заголовка авторизации для пользователя `foo-user`:
-
-```
-Authorization: MyAuth1 sub="foo-user"
-```
-
-#### Bearer
-
-При `Bearer` аутентификации с `jwt` токеном, все утверждения из токена попадают в заголовок авторизации со своими именами.
-
-### MyAuth v2
-
-#### Basic
-
-При `Basic` аутентификации, кроме заголовка авторизации, добавляется только заголовок с идентификатором пользователя `X-Claim-User-Id`. Пример заголовка авторизации для пользователя `foo-user`:
-
-```
-Authorization: MyAuth2
-X-Claim-User-Id: foo-user
-```
-
-#### Bearer
-
-##### Имена заголовков
-
-При `Bearer` аутентификации с `jwt` токеном, кроме заголовка авторизации, все утверждения из токена добавляются в перенаправленный запрос в виде заголовков с префиксом `X-Claim-<нормализованный_тип_утверждения>`. 
-
-Нормализация типа утверждения:
-
-* заменяет разделитель `:` на `-`;
-* первые буквы разделённых слов переводи в верхний регистр.
-
-Пример утверждений:
-
-```
-MyClaim1 = val1
-myClaim2 = val2
-my-claim-3 = val3 
-my:claim:4 = val4
-```
-
-Заголовки перенаправленного запроса по этим утверждениям:
-
-```
-Authorization: MyAuth2
-X-Claim-MyClaim1: val1
-X-Claim-MyClaim2: val2
-X-Claim-My-Claim-3: val3
-X-Claim-My-Claim-4: val4
-```
-
-##### Зарезервированные заголовки
-
-Для следующих утверждений используются фиксированные имена заголовков:
-
-* `sub` -> `X-Claim-User-Id`;
-* `roles` -> `X-Claim-Roles`;
-* `role` -> `X-Claim-Role`;
-* `http://schemas.microsoft.com/ws/2008/06/identity/claims/role` -> `X-Claim-Role`;
-
-##### Утверждения-массивы
-
-Утверждения-массивы из `jwt` токена сериализуются в строку, где значения массива разделены запятыми. 
-
-Пример: 
-
-```
-Authorization: MyAuth2
-X-Claim-Roles: admin,user
-```
-

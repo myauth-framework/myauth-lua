@@ -24,7 +24,7 @@ function tb:test_should_not_authorize_wrong_token()
    local m = create_m()
    local t, error_code, error_reason = m.authorize(wrong_token)
    
-   if (error_code ~= 'invalid_token') then
+   if (error_code ~= 'invalid_token_format') then
       error("No expected error. Actual: " .. (error_code or "[nil]"))
    else
       if debug_mode then
@@ -40,8 +40,8 @@ function tb:test_should_not_authorize_wrong_secret()
 
    local  t, error_code, error_reason = m.authorize(token)
    
-   if (error_code ~= 'invalid_token') then
-      error("No expected error")
+   if (error_code ~= 'invalid_token_sign') then
+      error("No expected error Actual: " .. (error_code or "[nil]"))
    else
       if debug_mode then
          print("Actual error: " .. error_code ..  "; " .. error_reason)

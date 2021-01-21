@@ -22,7 +22,14 @@ function _M.authorize(token, host) -- token, error_code, error_reason
   local jwt_obj = jwt:verify(_M.secret, token)
 
   if not jwt_obj.verified then
-    return nil, 'invalid_token', jwt_obj.reason;
+
+    if string.find(jwt_obj.reason, "signature mismatch") then
+        return nil, 'invalid_token_sign', jwt_obj.reason;
+    elseif string.find(jwt_obj.reason, "invalid jwt string") then
+        return nil, 'invalid_token_format', jwt_obj.reason;
+    else
+        return nil, 'invalid_token', jwt_obj.reason;
+    end
   end
 
   if not _M.ignore_audience then
