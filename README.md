@@ -301,8 +301,7 @@ mycfg = cfg.load('/path/to/cfg-2.lua', mycfg)
 
 ```lua
 local cfg = require "myauth.config"
-local mycfg = cfg.load('/path/to/cfg.lua')
-mycfg = cfg.load('/path/to/cfg-2.lua', mycfg)
+local mycfg = cfg.load_dir('/path/to/config-files')
 ```
 
 Объединение происходит как в случае `load(filepath, base_config)`
