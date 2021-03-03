@@ -39,8 +39,9 @@ local function merge_rbac(base_rbac, cfg_rbac)
 	else
 
 		res.rules = merge_arrays(base_rbac.rules, cfg_rbac.rules)
+		res.ignore_audience = base_rbac.ignore_audience
 
-		if (base_rbac.ignore_audience == nil) then
+		if (res.ignore_audience == nil) then
 		   	if (cfg_rbac.ignore_audience == nil) then
 		   		res.ignore_audience = false
 		   	else

@@ -25,23 +25,20 @@ function tb:init(  )
 end
 
 function tb:test_should_not_merge_debug_mode()
-   if(m_merge.anon == false) then
-      error("Debug mode was overriden (false)")
-   end
-   if(m_merge.anon == nil) then
-      error("Debug mode was overriden (nil)")
+   if(m_merge.debug_mode ~= true) then
+      error("Debug mode has unexpected value (".. (m_merge.debug_mode or "[nil]") ..")")
    end
 end
 
 function tb:test_should_not_merge_output_scheme()
-   if(m_merge.output_scheme == 'blabla') then
-      error("Output scheme was overriden")
+   if(m_merge.output_scheme ~= 'myauth2') then
+      error("Output scheme has unexpected value (".. (m_merge.output_scheme or "[nil]") ..")")
    end
 end
 
 function tb:test_should_not_merge_ignore_audience()
-   if(m_merge.rbac.ignore_audience == false) then
-      error("Rbac ignore_audience was overriden (false)")
+   if(m_merge.rbac.ignore_audience ~= true) then
+      error("Rbac ignore_audience has unexpected value (".. (m_merge.rbac.ignore_audience or "[nil]") ..")")
    end
 end
 
@@ -286,12 +283,12 @@ end
 
 function tb:test_should_sort_files()
 
-  local files = { "2-cfg.lua", "1-cfg.lua", "0-main.lua" }
+  local files = { "bcfg.lua", "acfg.lua", "0-main.lua" }
   local orderred_files = config_module.sort_files(files)
 
   if(files[1] ~= "0-main.lua") then error("Wrong orderring: 0 = " .. (files[1] or "[nil]")) end
-  if(files[2] ~= "1-cfg.lua") then error("Wrong orderring: 1 = " .. (files[2] or "[nil]")) end
-  if(files[3] ~= "2-cfg.lua") then error("Wrong orderring: 2 = " .. (files[3] or "[nil]")) end
+  if(files[2] ~= "acfg.lua") then error("Wrong orderring: 1 = " .. (files[2] or "[nil]")) end
+  if(files[3] ~= "bcfg.lua") then error("Wrong orderring: 2 = " .. (files[3] or "[nil]")) end
 
 end
 
