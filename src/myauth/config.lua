@@ -53,6 +53,13 @@ local function merge_rbac(base_rbac, cfg_rbac)
 	return res;
 end
 
+function _M.sort_files(files)
+
+	table.sort(files,  function(f1, f2) return f1 < f2 end)
+	return files
+
+end
+
 local function listfiles(dir)
     local list = {}
     
@@ -65,8 +72,8 @@ local function listfiles(dir)
       end
     end
       
-    return list
-  end
+    return _M.sort_files(list)
+end
 
 function _M.load(filepath, baseConfig)
 	local configEnv = {}

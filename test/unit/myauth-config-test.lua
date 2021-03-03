@@ -284,5 +284,16 @@ function tb:test_should_load_from_dir()
 
 end
 
+function tb:test_should_sort_files()
+
+  local files = { "2-cfg.lua", "1-cfg.lua", "0-main.lua" }
+  local orderred_files = config_module.sort_files(files)
+
+  if(files[1] ~= "0-main.lua") then error("Wrong orderring: 0 = " .. (files[1] or "[nil]")) end
+  if(files[2] ~= "1-cfg.lua") then error("Wrong orderring: 1 = " .. (files[2] or "[nil]")) end
+  if(files[3] ~= "2-cfg.lua") then error("Wrong orderring: 2 = " .. (files[3] or "[nil]")) end
+
+end
+
 -- units test
 tb:run()

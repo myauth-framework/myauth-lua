@@ -1,9 +1,9 @@
 rockspec_format = '3.0'
 package = 'myauth'
-version = '1.2.2-0'
+version = '1.2.3-0'
 source = {
   url = 'git://github.com/ozzy-ext-myauth/myauth-lua',
-  tag = '1.2.2'
+  tag = '1.2.3'
 }
 description = {
   summary = 'LUA library with myauth verification logic',
