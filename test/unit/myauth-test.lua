@@ -292,5 +292,25 @@ function tb:test_should_pass_when_allow_for_all()
   should_pass_rbac(m, "/bearer-access-1", "GET", admin_rbac_header, host)
 end
 
+function tb:test_should_pass_when_allow_and_notdeny_rules()
+  local config = {
+    debug_mode=debug_mode,
+    rbac = {
+      rules = {
+        {
+          url = "/bearer-access-[%d]+",
+          allow_for_all=true
+        },
+        {
+          url = "/bearer-access-[%d]+/my",
+          allow = {"another-user"}
+        }
+      }
+    }
+  }
+  local m = create_myauth(config)
+  should_pass_rbac(m, "/bearer-access-1/my", "GET", admin_rbac_header, host)
+end
+
 -- units test
 tb:run()

@@ -220,9 +220,6 @@ function MyAuth:check_rbac_roles(url, http_method, token_roles)
       elseif self:has_value(factors, true) then
         calc_rule.total_factor = true
         table.insert(rules_factors, true)
-      else
-        calc_rule.total_factor = false
-        table.insert(rules_factors, false)
       end
 
       table.insert(calc_rules, calc_rule)
