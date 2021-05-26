@@ -10,19 +10,19 @@ _M.debug_rbac_info = nil
 
 function _M.set_debug_rbac_header(info)
   _M.debug_rbac_info = info
-  if debug_mode then
+  if _M.debug_mode then
     print(info)
   end
 end
 
 function _M.set_auth_header(value)
-  if debug_mode then
+  if _M.debug_mode then
     print("Set Authorization header: " .. value)
   end
 end
 
 function _M.set_claim_header(name, value)
-  if debug_mode then
+  if _M.debug_mode then
     print("Set claim header 'X-Claim-" .. name .. "': " .. value)
   end
 end

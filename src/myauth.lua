@@ -6,23 +6,17 @@ require "myauth.jwt"
 require "myauth.nginx"
 require "myauth.empty-event-listener"
 
+local url_tools = require "myauth.url-tools"
+
 local MyAuth = {}
 local mt = { __index = MyAuth }
-
-function MyAuth:check_url(url, pattern)
-
-  local norm_pattern, _ = string.gsub(pattern, "-", "%%-")
-  norm_pattern, _ = string.gsub(norm_pattern, "%%%%%-", "%%-")
-  return string.match(url, norm_pattern)
-
-end
 
 function MyAuth:check_dont_apply_for(url)
   
   if self._auth_config.dont_apply_for ~= nil then
 
     for i, url_pattern in ipairs(self._auth_config.dont_apply_for) do
-        if self:check_url(url, url_pattern) then
+        if url_tools.check_url(url, url_pattern) then
             return true
         end
     end
@@ -35,7 +29,7 @@ function MyAuth:check_only_apply_for(url)
   if self._auth_config.only_apply_for ~= nil then
 
     for i, url_pattern in ipairs(self._auth_config.only_apply_for) do
-        if self:check_url(url, url_pattern) then
+        if url_tools.check_url(url, url_pattern) then
             return true
         end
     end
@@ -48,7 +42,7 @@ function MyAuth:check_black_list(url)
   if self._auth_config.black_list ~= nil then
 
     for i, url_pattern in ipairs(self._auth_config.black_list) do
-        if self:check_url(url, url_pattern) then
+        if url_tools.check_url(url, url_pattern) then
             return true
         end
     end
@@ -87,7 +81,7 @@ function MyAuth:check_anon(url)
   end
   
   for i, url_pattern in ipairs(self._auth_config.anon) do
-    if(self:check_url(url, url_pattern)) then
+    if(url_tools.check_url(url, url_pattern)) then
       self._event_listener:on_allow_anon(url)
       return
     end
@@ -116,7 +110,7 @@ function MyAuth:check_basic(url, cred)
 
       for i, url_pattern in ipairs(user.urls) do
 
-        if self:check_url(url, url_pattern) then
+        if url_tools.check_url(url, url_pattern) then
 
           self._auth_schema.apply_basic(user_id, self._ngx_strategy)
           
@@ -166,13 +160,20 @@ end
 function MyAuth:check_rbac_roles(url, http_method, token_roles)
 
   local calc_rules = {}
-  local rules_factors = {}
+  --local rules_factors = {}
+
+  local rules_factor = nil;
+  local rules_factor_rate = 0;
 
   for _, rule in ipairs(self._auth_config.rbac.rules) do
-    if(self:check_url(url, rule.url)) then
+    
+    local url_hit, url_rate = url_tools.check_url_rate(url, rule.url)
+    
+    if url_hit then
 
       local calc_rule = { 
         pattern = rule.url,
+        rate = url_rate,
         total_factor = nil
       }
 
@@ -181,6 +182,10 @@ function MyAuth:check_rbac_roles(url, http_method, token_roles)
       if rule.allow_for_all then
         calc_rule.allow_for_all = true
         table.insert(factors, true)
+      elseif 
+        rule.deny_for_all then
+        calc_rule.deny_for_all = true
+        table.insert(factors, false)
       else
         for _, rl in ipairs(token_roles) do
           if self:has_value(rule.allow, rl) then
@@ -214,22 +219,47 @@ function MyAuth:check_rbac_roles(url, http_method, token_roles)
         end
       end
 
-      if self:has_value(factors, false) then
-        calc_rule.total_factor = false
-        table.insert(rules_factors, false)
-      elseif self:has_value(factors, true) then
-        calc_rule.total_factor = true
-        table.insert(rules_factors, true)
+      -- if self:has_value(factors, false) then
+      --   calc_rule.total_factor = false
+      --   table.insert(rules_factors, false)
+      -- elseif self:has_value(factors, true) then
+      --   calc_rule.total_factor = true
+      --   table.insert(rules_factors, true)
+      -- else
+      --   calc_rule.total_factor = "undefined"
+      -- end
+
+      local hasRuleDenies = self:has_value(factors, false)
+      local hasRuleAllows = self:has_value(factors, true)
+      local resultRuleFactor = nil
+
+      if hasRuleDenies then 
+        resultRuleFactor = false 
+      elseif hasRuleAllows then 
+        resultRuleFactor = true 
+      end 
+
+      if resultRuleFactor ~= nil then
+  
+        calc_rule.total_factor = resultRuleFactor
+
+        if url_rate >= rules_factor_rate then
+          rules_factor = resultRuleFactor          
+          rules_factor_rate = url_rate
+        end
+      else
+        calc_rule.total_factor = "undefined"
       end
 
       table.insert(calc_rules, calc_rule)
     end
   end
 
-  local hasDenies = self:has_value(rules_factors, false);
-  local hasAllows = self:has_value(rules_factors, true);
+  --local hasDenies = self:has_value(rules_factors, false);
+  --local hasAllows = self:has_value(rules_factors, true);
 
-  local total_result = not hasDenies and hasAllows
+  --local total_result = not hasDenies and hasAllows
+  local total_result = rules_factor or false
 
   return total_result, { rules = calc_rules, roles = token_roles, method = http_method, url = url }
 end
