@@ -3,7 +3,7 @@ echo off
 IF [%1]==[] goto noparam
 
 echo "Build image ..."
-docker build --no-cache --build-arg MYAUTH_LUA_VERSION=1.2.4 -t ozzyext/myauth-lua-host:%1 -t ozzyext/myauth-lua-host:latest .
+docker build --no-cache --build-arg MYAUTH_LUA_VERSION=1.2.5 -t ozzyext/myauth-lua-host:%1 -t ozzyext/myauth-lua-host:latest .
 
 echo "Publish image '%1' ..."
 docker push ozzyext/myauth-lua-host:%1

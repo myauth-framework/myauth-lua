@@ -721,7 +721,8 @@ debug_mode=true
     {
       "total_factor": true,
       "allow_get": "User3",
-      "pattern": "\\/rbac-access-[%d]+"
+      "pattern": "\\/rbac-access-[%d]+",
+      "rate": "13"
     }
   ]
 }
@@ -747,7 +748,8 @@ debug_mode=true
     {
       "total_factor": false,
       "pattern": "\\/rbac-access-[%d]+",
-      "deny": "User2"
+      "deny": "User2",
+      "rate": "13"
     }
   ]
 }
@@ -775,7 +777,8 @@ debug_mode=true
       "total_factor": false,
       "allow": "User1",
       "deny_post": "User1",
-      "pattern": "\\/rbac-access-[%d]+"
+      "pattern": "\\/rbac-access-[%d]+",
+      "rate": "13"
     }
   ]
 }
@@ -788,6 +791,3 @@ debug_mode=true
 #### X-Debug-Msg
 
 Передаёт сообщение от логики авторизации, поясняющее статус ответа.
-
-[#load_dir(dirpath)]: 
-[#load_dirdirpath]: 

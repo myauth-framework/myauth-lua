@@ -1,9 +1,9 @@
 rockspec_format = '3.0'
 package = 'myauth'
-version = '1.2.4-0'
+version = '1.2.5-0'
 source = {
-  url = 'git://github.com/ozzy-ext-myauth/myauth-lua',
-  tag = '1.2.4'
+  url = 'git://github.com/myauth-framework/myauth-lua',
+  tag = '1.2.5'
 }
 description = {
   summary = 'LUA library with myauth verification logic',
@@ -11,7 +11,7 @@ description = {
     Requires an nginx build
     with the ngx_lua module.
   ]],
-  homepage = 'https://github.com/ozzy-ext-myauth/myauth-lua',
+  homepage = 'https://github.com/myauth-framework/myauth-lua',
   license = 'The MIT License (MIT)'
 }
 dependencies = {

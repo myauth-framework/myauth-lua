@@ -16,7 +16,7 @@ local debug_mode = true
 
 local function create_myauth(config)
   
-  -- print(require "cjson".encode(config)) 
+  --print(require "cjson".encode(config)) 
 
   local ngx_strategy = require "stuff.myauth-test-nginx";
   local secrets = { jwt_secret="qwerty" }
@@ -290,6 +290,46 @@ function tb:test_should_pass_when_allow_for_all()
   }
   local m = create_myauth(config)
   should_pass_rbac(m, "/bearer-access-1", "GET", admin_rbac_header, host)
+end
+
+function tb:test_should_pass_when_allow_and_notdeny_rules()
+  local config = {
+    debug_mode=debug_mode,
+    rbac = {
+      rules = {
+        {
+          url = "/bearer-access-[%d]+",
+          allow_for_all=true
+        },
+        {
+          url = "/bearer-access-[%d]+/my",
+          allow = {"another-user"}
+        }
+      }
+    }
+  }
+  local m = create_myauth(config)
+  should_pass_rbac(m, "/bearer-access-1/my", "GET", admin_rbac_header, host)
+end
+
+function tb:test_should_pass_when_more_exact_allow_and_has_base_denied()
+  local config = {
+    debug_mode=debug_mode,
+    rbac = {
+      rules = {
+        {
+          url = "/bearer-access-[%d]+",
+          deny_for_all=true
+        },
+        {
+          url = "/bearer-access-[%d]+/my",
+          allow = {"Admin"}
+        }
+      }
+    }
+  }
+  local m = create_myauth(config)
+  should_pass_rbac(m, "/bearer-access-1/my", "GET", admin_rbac_header, host)
 end
 
 -- units test
