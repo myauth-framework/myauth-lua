@@ -32,6 +32,7 @@ build = {
     ['myauth.scheme-v2'] = 'src/myauth/scheme-v2.lua',
     ['myauth.secrets'] = 'src/myauth/secrets.lua',
     ['myauth.empty-event-listener'] = 'src/myauth/empty-event-listener.lua',
-    ['myauth.prometheus-event-listener'] = 'src/myauth/prometheus-event-listener.lua'
+    ['myauth.prometheus-event-listener'] = 'src/myauth/prometheus-event-listener.lua',
+    ['myauth.url-tools'] = 'src/myauth/url-tools.lua'
   }
 }
