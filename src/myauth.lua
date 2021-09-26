@@ -76,7 +76,7 @@ end
 function MyAuth:check_anon(url)
   
   if(self._auth_config == nil or self._auth_config.anon == nil) then
-    self._event_listener:on_deny_dueto_no_anon_auth_config(url)
+    self._event_listener:on_deny_dueto_no_anon_config(url)
     self._ngx_strategy.exit_forbidden("There is no anon access in _auth_configuration")
   end
   
@@ -94,7 +94,7 @@ end
 function MyAuth:check_basic(url, cred)
 
   if(self._auth_config == null or self._auth_config.basic == nil) then
-    self._event_listener:on_deny_dueto_no_basic_auth_config(url)
+    self._event_listener:on_deny_dueto_no_basic_config(url)
     self._ngx_strategy.exit_forbidden("There's no basic access in _auth_configuration")
   end
 
