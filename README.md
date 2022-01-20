@@ -4,7 +4,7 @@
 
 [![Docker image](https://img.shields.io/docker/v/ozzyext/myauth-lua-host?sort=semver&label=docker)](https://hub.docker.com/r/ozzyext/myauth-lua-host)
 
-Ознакомьтесь с последними изменениями в [журнале изменений](/changelog.md).
+Ознакомьтесь с последними изменениями в [журнале изменений](/CHANGELOG.md).
 
 ## Обзор
 
@@ -149,9 +149,11 @@ rbac = {
 
 ### Файл секретов
 
+#### Формат файла с секретами
+
 Файл с секретами содержит данные, которые не должны иметь ограниченный доступ. В текущей версии секреты состоят из:
 
-* `jwt_secret` - ключ для проверки подписи `JWT` токена по алгоритму `HS256`.
+* `jwt_secret` - ключ для проверки подписи `JWT`.
 
 Формат файла - `LUA` скрипт с объявлением переменных.
 
@@ -159,6 +161,77 @@ rbac = {
 
 ```lua
 jwt_secret = "some-secret"
+```
+
+#### RSA-PEM
+
+В случае с применением `RS256` для подписи токена, секрет должен содержать публичный `RSA`-ключ в формате `PEM` в `base64` со следующими особенностями:
+
+* все переносы строк должны быть заменены на `\n`
+* должен начинаться с `-----BEGIN PUBLIC KEY-----\n`
+* должен заканчиваться `\n-----END PUBLIC KEY-----`
+
+Пример `RSA` ключа в формате:
+
+```
+-----BEGIN PUBLIC KEY-----
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAwgznUGldJhNPcUERdhT3
+321nXfHn/zeIGOa6dpdJR8fll8XTbtUOdG4b1J1ehd4Nw4AHUpM+q/dGPoesSLY/
+rPuFWujoDBtOXmr8g+OAHHQP08+j5jqaENZNE0iZj7jyW2eaieYkmY7vTSKuYevE
+gSstBTjvzaAV1hkEN37JY3u1ildKA8HYoCXLECr1P4hSRKWw1R1KzOceMVPcq8Tg
+ERF7e8v0hrv/6ngZqBjDODLAjWDmIwt7h9DV5yn5or07WcH/yFKYGj5PIrLRrezo
+o2YCd9mqr1SNFId4rJb2FFe2ZE2kyFe7v7ul1YD3wS3bkWctvH4wLV9FdyLVo356
+PZPrjxRFRTQ6ofSuIHpj8BmgjEq5WTq/qsiOqf+VUA1kplD5CNoE4N4tX3wpYXEZ
+w9X6ne3nd4xPDwqVVEMb6JfE0xJmbNcH2N1ybIZg1Memyc2LTRNMbY0qquydgDXq
+LNyxEm5+GPjxI+cNOd7c9mUMaBmvEi/dMqGmY8gQITmSgibX0SYYeyU3cDIBg69E
+JqKPslWwmgJ71HQEX7o6bfYn3Kwej3gxySr5flQqgrWNgpHEmdOy1xnxQiZFpTyU
+h6pMF3aWQ+tKvtB/ZVspUSfduGXrqPdHKbwY0wGFtOjJEbFt2Y6yka8evLb+JGv+
+O6J9zQ+32sEyehoZufK2sZECAwEAAQ==
+-----END PUBLIC KEY-----
+```
+
+ Этот же ключ в файле с секретами:
+
+```
+jwt_secret = "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAwgznUGldJhNPcUERdhT3\n321nXfHn/zeIGOa6dpdJR8fll8XTbtUOdG4b1J1ehd4Nw4AHUpM+q/dGPoesSLY/\nrPuFWujoDBtOXmr8g+OAHHQP08+j5jqaENZNE0iZj7jyW2eaieYkmY7vTSKuYevE\ngSstBTjvzaAV1hkEN37JY3u1ildKA8HYoCXLECr1P4hSRKWw1R1KzOceMVPcq8Tg\nERF7e8v0hrv/6ngZqBjDODLAjWDmIwt7h9DV5yn5or07WcH/yFKYGj5PIrLRrezo\no2YCd9mqr1SNFId4rJb2FFe2ZE2kyFe7v7ul1YD3wS3bkWctvH4wLV9FdyLVo356\nPZPrjxRFRTQ6ofSuIHpj8BmgjEq5WTq/qsiOqf+VUA1kplD5CNoE4N4tX3wpYXEZ\nw9X6ne3nd4xPDwqVVEMb6JfE0xJmbNcH2N1ybIZg1Memyc2LTRNMbY0qquydgDXq\nLNyxEm5+GPjxI+cNOd7c9mUMaBmvEi/dMqGmY8gQITmSgibX0SYYeyU3cDIBg69E\nJqKPslWwmgJ71HQEX7o6bfYn3Kwej3gxySr5flQqgrWNgpHEmdOy1xnxQiZFpTyU\nh6pMF3aWQ+tKvtB/ZVspUSfduGXrqPdHKbwY0wGFtOjJEbFt2Y6yka8evLb+JGv+\nO6J9zQ+32sEyehoZufK2sZECAwEAAQ==\n-----END PUBLIC KEY-----"
+```
+
+#### RSA-JWK
+
+При наличии `RSA` ключа в формате `JWK`, необходимо предварительно конвертировать его в PEM формат, а далее руководствоваться предыдущим пунктом. 
+
+Для ручного преобразования можно воспользоваться [онлайн сервисом](https://8gwifi.org/jwkconvertfunctions.jsp).
+
+Пример `JWK`:
+
+```json
+{
+    "use": "sig",
+    "kty": "RSA",
+    "kid": "public:eefb3cec-5b95-465d-8d7e-aa3301f78ceb",
+    "alg": "RS256",
+    "n": "wgznUGldJhNPcUERdhT3321nXfHn_zeIGOa6dpdJR8fll8XTbtUOdG4b1J1ehd4Nw4AHUpM-q_dGPoesSLY_rPuFWujoDBtOXmr8g-OAHHQP08-j5jqaENZNE0iZj7jyW2eaieYkmY7vTSKuYevEgSstBTjvzaAV1hkEN37JY3u1ildKA8HYoCXLECr1P4hSRKWw1R1KzOceMVPcq8TgERF7e8v0hrv_6ngZqBjDODLAjWDmIwt7h9DV5yn5or07WcH_yFKYGj5PIrLRrezoo2YCd9mqr1SNFId4rJb2FFe2ZE2kyFe7v7ul1YD3wS3bkWctvH4wLV9FdyLVo356PZPrjxRFRTQ6ofSuIHpj8BmgjEq5WTq_qsiOqf-VUA1kplD5CNoE4N4tX3wpYXEZw9X6ne3nd4xPDwqVVEMb6JfE0xJmbNcH2N1ybIZg1Memyc2LTRNMbY0qquydgDXqLNyxEm5-GPjxI-cNOd7c9mUMaBmvEi_dMqGmY8gQITmSgibX0SYYeyU3cDIBg69EJqKPslWwmgJ71HQEX7o6bfYn3Kwej3gxySr5flQqgrWNgpHEmdOy1xnxQiZFpTyUh6pMF3aWQ-tKvtB_ZVspUSfduGXrqPdHKbwY0wGFtOjJEbFt2Y6yka8evLb-JGv-O6J9zQ-32sEyehoZufK2sZE",
+    "e": "AQAB"
+}
+```
+
+Этот же ключ после конвертирования в `PEM`:
+
+```
+-----BEGIN PUBLIC KEY-----
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAwgznUGldJhNPcUERdhT3
+321nXfHn/zeIGOa6dpdJR8fll8XTbtUOdG4b1J1ehd4Nw4AHUpM+q/dGPoesSLY/
+rPuFWujoDBtOXmr8g+OAHHQP08+j5jqaENZNE0iZj7jyW2eaieYkmY7vTSKuYevE
+gSstBTjvzaAV1hkEN37JY3u1ildKA8HYoCXLECr1P4hSRKWw1R1KzOceMVPcq8Tg
+ERF7e8v0hrv/6ngZqBjDODLAjWDmIwt7h9DV5yn5or07WcH/yFKYGj5PIrLRrezo
+o2YCd9mqr1SNFId4rJb2FFe2ZE2kyFe7v7ul1YD3wS3bkWctvH4wLV9FdyLVo356
+PZPrjxRFRTQ6ofSuIHpj8BmgjEq5WTq/qsiOqf+VUA1kplD5CNoE4N4tX3wpYXEZ
+w9X6ne3nd4xPDwqVVEMb6JfE0xJmbNcH2N1ybIZg1Memyc2LTRNMbY0qquydgDXq
+LNyxEm5+GPjxI+cNOd7c9mUMaBmvEi/dMqGmY8gQITmSgibX0SYYeyU3cDIBg69E
+JqKPslWwmgJ71HQEX7o6bfYn3Kwej3gxySr5flQqgrWNgpHEmdOy1xnxQiZFpTyU
+h6pMF3aWQ+tKvtB/ZVspUSfduGXrqPdHKbwY0wGFtOjJEbFt2Y6yka8evLb+JGv+
+O6J9zQ+32sEyehoZufK2sZECAwEAAQ==
+-----END PUBLIC KEY-----
 ```
 
 ### Шаблоны 
