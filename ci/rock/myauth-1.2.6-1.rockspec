@@ -1,8 +1,8 @@
 rockspec_format = '3.0'
 package = 'myauth'
-version = '1.2.6-0'
+version = '1.2.6-1'
 source = {
-  url = 'git://github.com/myauth-framework/myauth-lua',
+  url = 'git+https://github.com/myauth-framework/myauth-lua',
   tag = '1.2.6'
 }
 description = {
@@ -17,7 +17,6 @@ description = {
 dependencies = {
   'base64 >= 1.5',
   'lua-resty-jwt >= 0.2.2',
-  'lua-resty-test >= 0.1',
   'luafilesystem >= 1.8.0'
 }
 build = {
