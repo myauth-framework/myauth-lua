@@ -58,10 +58,10 @@ end
 function tb:test_should_pass_anon()
   local config = {
     debug_mode=debug_mode,
-    anon = { "/foo" }
+    anon = { "/foo/123" }
   }
   local m = create_myauth(config)
-  m:authorize_core("/foo")
+  m:authorize_core("/foo/123")
 end
 
 function tb:test_should_fail_anon_if_url_not_defined()

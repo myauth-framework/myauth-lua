@@ -1,13 +1,13 @@
--- test-event-listener.lua
+-- empty-event-listener.lua
 
 local EmptyEventListener = {}
 local mt = { __index = EmptyEventListener }
 
-function EmptyEventListener:new()
+function EmptyEventListener.new()
 
 	local new_obj = setmetatable({}, mt)
 
-  	return new_obj;
+  	return new_obj
 
 end
 
@@ -71,4 +71,4 @@ function EmptyEventListener:on_deny_rbac_token(url, host, error_code, error_reas
 	
 end
 
-return EmptyEventListener;
+return EmptyEventListener

@@ -366,7 +366,11 @@ function MyAuth.new(config, secrets, event_listener, nginx_strategy)
 
   new_obj._auth_config = config
   new_obj._ngx_strategy = nginx_strategy or require "myauth.nginx"
-  new_obj._event_listener = event_listener or require "myauth.empty-event-listener".new()
+  
+  local inner_event_listener = event_listener or require "myauth.empty-event-listener".new() 
+
+  new_obj._event_listener = require "myauth.norm-wrapper-event-listener".new(inner_event_listener)
+  
   new_obj._mjwt = require "myauth.jwt"
   
   new_obj._mjwt.secret = secrets.jwt_secret

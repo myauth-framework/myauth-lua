@@ -1,2 +1,2 @@
 @echo off
-resty -I ../../src -Ilib %1-test.lua 
+resty -I ../../src -Ilib myauth-%1-test.lua 

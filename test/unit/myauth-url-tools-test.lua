@@ -49,5 +49,25 @@ function tb:test_should_calc_rate()
    end
 end
 
+function tb:test_should_pattern_identifier()
+
+   local test_url = "/some/url/123/ololo"
+   local res = url_tools.to_url_pattern(test_url)
+   
+   if res ~= "/some/url/xxx/ololo" then
+      error("Bad result: " .. res)
+   end
+end
+
+function tb:test_should_not_pattern_literals()
+
+   local test_url = "/some/url/v1/ololo"
+   local res = url_tools.to_url_pattern(test_url)
+   
+   if res ~= "/some/url/v1/ololo" then
+      error("Bad result: " .. res)
+   end
+end
+
 -- units test
 tb:run()
