@@ -1,9 +1,9 @@
 rockspec_format = '3.0'
 package = 'myauth'
-version = '1.2.7-0'
+version = '1.2.8-0'
 source = {
   url = 'git+https://github.com/myauth-framework/myauth-lua',
-  tag = '1.2.7'
+  tag = '1.2.8'
 }
 description = {
   summary = 'LUA library with myauth verification logic',
