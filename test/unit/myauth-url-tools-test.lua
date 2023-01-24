@@ -40,11 +40,22 @@ end
 
 function tb:test_should_calc_rate()
 
-	local test_url = "/some/url/1"
+	local test_url = "/some/url/1/substr"
 	local _, rate1 = url_tools.check_url_rate(test_url, "/some/url/")
 	local _, rate2 = url_tools.check_url_rate(test_url, "/some/url/1")
 
-   if rate2 <= rate1 then
+   if rate1 ~= 10 or rate2 ~= 11 then
+      error("Rate calculation error")
+   end
+end
+
+function tb:test_should_calc_exact_rate()
+
+   local test_url = "/some/url/1"
+   local _, rate1 = url_tools.check_url_rate(test_url, "/some/url/")
+   local _, rate2 = url_tools.check_url_rate(test_url, "/some/url/1")
+
+   if rate1 ~= 10 or rate2 ~= 100500 then
       error("Rate calculation error")
    end
 end

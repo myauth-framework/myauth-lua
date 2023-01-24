@@ -26,7 +26,16 @@ function _M.check_url_rate(url, pattern)
 
   local norm_pattern, _ = string.gsub(pattern, "-", "%%-")
   norm_pattern, _ = string.gsub(norm_pattern, "%%%%%-", "%%-")
-  return string.match(url, norm_pattern), string.len(pattern)
+
+  local rate;
+
+  if norm_pattern == url then
+    rate = 100500
+  else
+    rate = string.len(pattern)
+  end
+
+  return string.match(url, norm_pattern), rate
 
 end
 

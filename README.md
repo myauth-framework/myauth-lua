@@ -2,7 +2,7 @@
 
 [![Lua rocks](https://img.shields.io/luarocks/v/ozzy-ext/myauth)](https://luarocks.org/modules/ozzy-ext/myauth) 
 
-[![Docker image](https://img.shields.io/docker/v/ozzyext/myauth-lua-host?sort=semver&label=docker)](https://hub.docker.com/r/ozzyext/myauth-lua-host)
+[![Docker image](https://img.shields.io/static/v1?label=docker&style=flat&logo=docker&message=image&color=blue)](https://github.com/myauth-framework/myauth-lua/pkgs/container/myauth-lua-host)
 
 Ознакомьтесь с последними изменениями в [журнале изменений](/CHANGELOG.md).
 
