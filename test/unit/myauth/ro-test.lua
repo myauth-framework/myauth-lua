@@ -1,5 +1,5 @@
 local iresty_test = require "resty.iresty_test"
-local tb = iresty_test.new({unit_name="myauth.rbac"})
+local tb = iresty_test.new({unit_name="myauth.readonly"})
 
 local admin_rbac_header = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJNeUF1dGguT0F1dGhQb2ludCIsInN1YiI6IjBjZWMwNjdmOGRhYzRkMTg5NTUxMjAyNDA2ZTQxNDdjIiwiZXhwIjo3NTY4NDcyMDI0LjAyNjUwMiwiYXVkIjoidGVzdC5ob3N0LnJ1Iiwicm9sZXMiOlsiQWRtaW4iXSwibXlhdXRoOmNsaW1lIjoiQ2xpbWVWYWwifQ.KUM0RXlvphoDHQPvLZD3E1HwVVZoejSm5kfrOSsIrEg"
 local ro_admin_rbac_header = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJNeUF1dGguT0F1dGhQb2ludCIsInN1YiI6IjBjZWMwNjdmOGRhYzRkMTg5NTUxMjAyNDA2ZTQxNDdjIiwiZXhwIjo3NTY4NDcyMDI0LjAyNjUwMiwiYXVkIjoidGVzdC5ob3N0LnJ1Iiwicm9sZXMiOlsiQWRtaW4iLCJteWF1dGg6cm8iXSwibXlhdXRoOmNsaW1lIjoiQ2xpbWVWYWwifQ.jsNei2b0rOldhhRkb-1h-Sm2WhFMNpLe80KpHgFL8TQ"
@@ -47,25 +47,9 @@ local function should_pass_rbac(m, ...)
   end
 end
 
-function tb:test_should_pass_rbac()
-  local config = {
-    debug_mode=debug_mode,
-    rbac = {
-      rules = {
-        {
-          url = "/bearer-access-[%d]+",
-          allow = { "Admin" } 
-        }
-      }
-    }
-  }
-  local m = create_myauth(config)
-  should_pass_rbac(m, "/bearer-access-1", "GET", admin_rbac_header, host)
-end
-
 function tb:test_should_pass_when_ro_and_get_resource()
 
-local config = {
+  local config = {
     debug_mode=debug_mode,
     rbac = {
       rules = {

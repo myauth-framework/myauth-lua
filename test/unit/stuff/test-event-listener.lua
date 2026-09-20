@@ -64,6 +64,10 @@ function TestEventListener:on_deny_no_rbac_rules_found(url, http_method, sub)
 	print('Event listener (on_deny_no_rbac_rules_found): ' .. url .. '; http_method = ' .. http_method .. '; sub = ' .. sub)
 end
 
+function TestEventListener:on_deny_readonly(url, http_method, sub)
+	print('Event listener (on_deny_readonly): ' .. url .. '; http_method = ' .. http_method .. '; sub = ' .. sub)
+end
+
 function TestEventListener:on_allow_rbac(url, http_method, sub)
 	print('Event listener (on_allow_rbac): ' .. url .. '; http_method = ' .. http_method .. '; sub = ' .. sub)
 end

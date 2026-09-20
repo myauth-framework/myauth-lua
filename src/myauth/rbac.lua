@@ -138,7 +138,51 @@ local function check_roles(self, url, http_method, token_roles)
   return total_result, { rules = calc_rules, roles = token_roles, method = http_method, url = url }
 end
 
+local function check_ro(self, url, http_method, token_roles)
+  
+  local total_result = true
+  local ro_mode = false
+  
+  for _, role in ipairs(token_roles) do
+    if role == "myauth:ro" then
+      ro_mode = true
+    end
+  end
+
+  if ro_mode then
+
+    if http_method ~= "GET" then
+      if http_method ~= "POST" or self._auth_config.rbac.ro_white_list == nil then
+        total_result = false
+      else
+        local match_found = false
+        for _, white_ulr in ipairs(self._auth_config.rbac.ro_white_list) do
+          local match = url_tools.check_url_rate(url, white_ulr)
+          if match then
+            match_found = true
+            break
+          end
+        end
+
+        if not match_found then 
+          total_result = false
+        end
+      end
+    end
+
+  end
+  
+  return total_result, { 
+    ro_mode = ro_mode, 
+    ro_white_list = self._auth_config.rbac.ro_white_list, 
+    roles = token_roles,
+    method = http_method, 
+    url = url }
+
+end
+
 function _M.check(self, url, http_method, token, host)
+
   if(self._auth_config == nil or self._auth_config.rbac == nil or self._auth_config.rbac.rules == nil) then
     self._event_listener:on_deny_dueto_no_rbac_config(url)
     self._ngx_strategy.exit_forbidden("There's no rbac access in configuration")
@@ -146,7 +190,13 @@ function _M.check(self, url, http_method, token, host)
 
   local token_obj = check_token(self, url, token, host)
   local token_roles = self._mjwt.get_token_roles(token_obj)
-  local check_result, debug_info = check_roles(self, url, http_method, token_roles)
+  
+  local check_result, debug_info = check_ro(self, url, http_method, token_roles)
+  local ro_restriction = not check_result
+
+  if check_result then
+    check_result, debug_info = check_roles(self, url, http_method, token_roles)
+  end
 
   if self._auth_config.debug_mode then
     local debug_info_str = require "cjson".encode(debug_info)
@@ -154,8 +204,17 @@ function _M.check(self, url, http_method, token, host)
   end
 
   if not check_result then
-    self._event_listener:on_deny_no_rbac_rules_found(url, http_method, token_obj.payload.sub)
-    self._ngx_strategy.exit_forbidden("No allowing rules were found for bearer")
+
+    print("Check RESULT: " .. tostring(check_result))
+
+    if ro_restriction then
+      self._event_listener:on_deny_readonly(url, http_method, token_obj.payload.sub)
+      self._ngx_strategy.exit_forbidden("Readonly restriction")
+    else
+      self._event_listener:on_deny_no_rbac_rules_found(url, http_method, token_obj.payload.sub)
+      self._ngx_strategy.exit_forbidden("No allowing rules were found for bearer")
+    end
+
   else
     local claims = self._mjwt.get_token_biz_claims(token_obj)
     self._auth_schema.apply_rbac(claims, self._ngx_strategy)

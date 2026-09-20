@@ -65,6 +65,10 @@ function PriometheusEventListener:on_deny_no_rbac_rules_found(url, http_method, 
 	self.metric_denied:inc(1, {ngx.var.server_name, url, 'no_rbac_rules_found'})
 end
 
+function PriometheusEventListener:on_deny_readonly(url, http_method, sub)
+	self.metric_denied:inc(1, {ngx.var.server_name, url, 'readonly_restriction'})
+end
+
 function PriometheusEventListener:on_allow_rbac(url, http_method, sub)
 	self.metric_allowed:inc(1, {ngx.var.server_name, url, 'rbac'})
 end
