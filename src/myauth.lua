@@ -160,7 +160,6 @@ end
 function MyAuth:check_rbac_roles(url, http_method, token_roles)
 
   local calc_rules = {}
-  --local rules_factors = {}
 
   local rules_factor = nil;
   local rules_factor_rate = 0;
@@ -219,16 +218,6 @@ function MyAuth:check_rbac_roles(url, http_method, token_roles)
         end
       end
 
-      -- if self:has_value(factors, false) then
-      --   calc_rule.total_factor = false
-      --   table.insert(rules_factors, false)
-      -- elseif self:has_value(factors, true) then
-      --   calc_rule.total_factor = true
-      --   table.insert(rules_factors, true)
-      -- else
-      --   calc_rule.total_factor = "undefined"
-      -- end
-
       local hasRuleDenies = self:has_value(factors, false)
       local hasRuleAllows = self:has_value(factors, true)
       local resultRuleFactor = nil
@@ -255,10 +244,6 @@ function MyAuth:check_rbac_roles(url, http_method, token_roles)
     end
   end
 
-  --local hasDenies = self:has_value(rules_factors, false);
-  --local hasAllows = self:has_value(rules_factors, true);
-
-  --local total_result = not hasDenies and hasAllows
   local total_result = rules_factor or false
 
   return total_result, { rules = calc_rules, roles = token_roles, method = http_method, url = url }
@@ -266,7 +251,7 @@ end
 
 function MyAuth:check_rbac(url, http_method, token, host)
 
-  if(self._auth_config == null or self._auth_config.rbac == nil or self._auth_config.rbac.rules == nil) then
+  if(self._auth_config == nil or self._auth_config.rbac == nil or self._auth_config.rbac.rules == nil) then
     self._event_listener:on_deny_dueto_no_rbac_config(url)
     self._ngx_strategy.exit_forbidden("There's no rbac access in configuration")
   end

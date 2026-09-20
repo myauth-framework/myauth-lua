@@ -38,6 +38,7 @@ local function merge_rbac(base_rbac, cfg_rbac)
 		res = cfg_rbac
 	else
 
+		res.ro_white_list = merge_arrays(base_rbac.ro_white_list, cfg_rbac.ro_white_list)
 		res.rules = merge_arrays(base_rbac.rules, cfg_rbac.rules)
 		res.ignore_audience = base_rbac.ignore_audience
 
