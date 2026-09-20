@@ -2,17 +2,20 @@
 
 local _M = {}
 
-local cjson = require "cjson"
-
 _M.secret = nil
 _M.ignore_audience = false
 
-function _M.authorize(token, host) -- token, error_code, error_reason 
-
-  if token == nil then
-    return nil, 'missing_token', nil;
+local function classify_verify_error(reason)
+  if string.find(reason, "signature mismatch") then
+    return 'invalid_token_sign'
+  elseif string.find(reason, "invalid jwt string") then
+    return 'invalid_token_format'
+  else
+    return 'invalid_token'
   end
+end
 
+local function verify_token(token)
   local jwt = require "resty.jwt"
 
   if _M.secret == nil then
@@ -22,30 +25,48 @@ function _M.authorize(token, host) -- token, error_code, error_reason
   local jwt_obj = jwt:verify(_M.secret, token)
 
   if not jwt_obj.verified then
-
-    if string.find(jwt_obj.reason, "signature mismatch") then
-        return nil, 'invalid_token_sign', jwt_obj.reason;
-    elseif string.find(jwt_obj.reason, "invalid jwt string") then
-        return nil, 'invalid_token_format', jwt_obj.reason;
-    else
-        return nil, 'invalid_token', jwt_obj.reason;
-    end
+    return nil, classify_verify_error(jwt_obj.reason), jwt_obj.reason
   end
 
-  if not _M.ignore_audience then
-    if jwt_obj.payload.aud ~= null then
-      if host ~= nil then
-        if(jwt_obj.payload.aud ~= host) then
-            return nil, 'invalid_audience', "Expected '" .. jwt_obj.payload.aud .. "' but actual '" .. host .. "'";
-        end
-      else
-        return nil, 'no_host', "Cant detect a host to check audience";
-      end
-    end
-  end 
-  
-  return jwt_obj, nil,nil
+  return jwt_obj, nil, nil
+end
 
+local function check_audience(jwt_obj, host)
+  if _M.ignore_audience then
+    return nil, nil
+  end
+
+  if jwt_obj.payload.aud == nil then
+    return nil, nil
+  end
+
+  if host == nil then
+    return 'no_host', "Cant detect a host to check audience"
+  end
+
+  if jwt_obj.payload.aud ~= host then
+    return 'invalid_audience', "Expected '" .. jwt_obj.payload.aud .. "' but actual '" .. host .. "'"
+  end
+
+  return nil, nil
+end
+
+function _M.authorize(token, host) -- token, error_code, error_reason
+  if token == nil then
+    return nil, 'missing_token', nil
+  end
+
+  local jwt_obj, error_code, error_reason = verify_token(token)
+  if error_code ~= nil then
+    return nil, error_code, error_reason
+  end
+
+  error_code, error_reason = check_audience(jwt_obj, host)
+  if error_code ~= nil then
+    return nil, error_code, error_reason
+  end
+
+  return jwt_obj, nil, nil
 end
 
 function _M.get_token_roles(jwt_obj)
