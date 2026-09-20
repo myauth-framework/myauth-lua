@@ -4,7 +4,7 @@ local url_tools = require "myauth.url-tools"
 
 local _M = {}
 
-function _M.has_value(self, tab, val)
+local function has_value(tab, val)
   if tab == nil then
     return false
   end
@@ -17,7 +17,7 @@ function _M.has_value(self, tab, val)
   return false
 end
 
-function _M.check_token(self, url, token, host)
+local function check_token(self, url, token, host)
   local token, error_code, error_reason = self._mjwt.authorize(token, host)
 
     if(error_code ~= nil) then
@@ -47,7 +47,7 @@ function _M.check_token(self, url, token, host)
     return token
 end
 
-function _M.check_roles(self, url, http_method, token_roles)
+local function check_roles(self, url, http_method, token_roles)
   local calc_rules = {}
 
   local rules_factor = nil;
@@ -76,14 +76,14 @@ function _M.check_roles(self, url, http_method, token_roles)
         table.insert(factors, false)
       else
         for _, rl in ipairs(token_roles) do
-          if _M.has_value(self, rule.allow, rl) then
+          if has_value(rule.allow, rl) then
             calc_rule.allow = rl
             table.insert(factors, true)
             break
           end
         end
         for _, rl in ipairs(token_roles) do
-          if _M.has_value(self, rule.deny, rl) then
+          if has_value(rule.deny, rl) then
             calc_rule.deny = rl
             table.insert(factors, false)
             break
@@ -92,7 +92,7 @@ function _M.check_roles(self, url, http_method, token_roles)
         for _, rl in ipairs(token_roles) do
           local method_allow_list_name = "allow_" .. string.lower(http_method)
           local method_allow_list = rule[method_allow_list_name]
-          if method_allow_list ~= nil and _M.has_value(self, method_allow_list, rl) then
+          if method_allow_list ~= nil and has_value(method_allow_list, rl) then
             calc_rule[method_allow_list_name] = rl
             table.insert(factors, true)
           end
@@ -100,15 +100,15 @@ function _M.check_roles(self, url, http_method, token_roles)
         for _, rl in ipairs(token_roles) do
           local method_deny_list_name = "deny_" .. string.lower(http_method)
           local method_deny_list = rule[method_deny_list_name]
-          if method_deny_list ~= nil and _M.has_value(self, method_deny_list, rl) then
+          if method_deny_list ~= nil and has_value(method_deny_list, rl) then
             calc_rule[method_deny_list_name] = rl
             table.insert(factors, false)
           end
         end
       end
 
-      local hasRuleDenies = _M.has_value(self, factors, false)
-      local hasRuleAllows = _M.has_value(self, factors, true)
+      local hasRuleDenies = has_value(factors, false)
+      local hasRuleAllows = has_value(factors, true)
       local resultRuleFactor = nil
 
       if hasRuleDenies then
@@ -144,9 +144,9 @@ function _M.check(self, url, http_method, token, host)
     self._ngx_strategy.exit_forbidden("There's no rbac access in configuration")
   end
 
-  local token_obj = _M.check_token(self, url, token, host)
+  local token_obj = check_token(self, url, token, host)
   local token_roles = self._mjwt.get_token_roles(token_obj)
-  local check_result, debug_info = _M.check_roles(self, url, http_method, token_roles)
+  local check_result, debug_info = check_roles(self, url, http_method, token_roles)
 
   if self._auth_config.debug_mode then
     local debug_info_str = require "cjson".encode(debug_info)

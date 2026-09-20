@@ -4,7 +4,7 @@ local url_tools = require "myauth.url-tools"
 
 local _M = {}
 
-function _M.get_user(self, value)
+local function get_user(value)
   local decoded = require "base64".decode(value)
   local sep_index = decoded:find(":")
   return decoded:sub(1, sep_index-1), decoded:sub(sep_index+1)
@@ -16,7 +16,7 @@ function _M.check(self, url, cred)
     self._ngx_strategy.exit_forbidden("There's no basic access in _auth_configuration")
   end
 
-  local user_id, user_pass = _M.get_user(self, cred)
+  local user_id, user_pass = get_user(cred)
 
   for _, user in ipairs(self._auth_config.basic) do
     if user.id == user_id then

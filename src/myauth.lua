@@ -8,17 +8,6 @@ local rbac = require "myauth.rbac"
 local MyAuth = {}
 local mt = { __index = MyAuth }
 
-MyAuth.check_dont_apply_for = url_filters.check_dont_apply_for
-MyAuth.check_only_apply_for = url_filters.check_only_apply_for
-MyAuth.check_black_list = url_filters.check_black_list
-MyAuth.has_value = rbac.has_value
-MyAuth.get_basic_user = basic.get_user
-MyAuth.check_anon = anon.check
-MyAuth.check_basic = basic.check
-MyAuth.check_rbac_token = rbac.check_token
-MyAuth.check_rbac_roles = rbac.check_roles
-MyAuth.check_rbac = rbac.check
-
 function MyAuth:authorize()
 
   local auth_header = ngx.var.http_Authorization
@@ -51,35 +40,35 @@ function MyAuth:authorize_core(url, http_method, auth_header, host_header)
 
   end
 
-  if self:check_dont_apply_for(url) then
+  if url_filters.check_dont_apply_for(self, url) then
     self._event_listener:on_allow_dueto_dont_apply_for(url)
     return
   end
 
-  if self._auth_config.only_apply_for ~= nil and not self:check_only_apply_for(url) then
+  if self._auth_config.only_apply_for ~= nil and not url_filters.check_only_apply_for(self, url) then
     self._event_listener:on_allow_dueto_only_apply_for(url)
     return
   end
 
-  if self:check_black_list(url) then
+  if url_filters.check_black_list(self, url) then
     self._event_listener:on_deny_dueto_black_list(url)
     self._ngx_strategy.exit_forbidden("Specified url was found in black list")
   end
 
   if auth_header == nil then
-    self:check_anon(url)
+    anon.check(self, url)
     return
 	end
 
 	local _, _, token = string.find(auth_header, "Bearer%s+(.+)")
 	if token ~= nil then
-  	self:check_rbac(url, http_method, token, host_header)
+  	rbac.check(self, url, http_method, token, host_header)
   	return
 	end
 
 	local _, _, basic_cred = string.find(auth_header, "Basic%s+(.+)")
 	if basic_cred ~= nil then
-  	self:check_basic(url, basic_cred)
+  	basic.check(self, url, basic_cred)
   	return
 	end
 
