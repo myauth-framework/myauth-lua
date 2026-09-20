@@ -1,6 +1,5 @@
 local iresty_test = require "resty.iresty_test"
-local tb = iresty_test.new({unit_name="myauth.config-test"})
-local cjson = require "cjson"
+local tb = iresty_test.new({unit_name="config"})
 
 local m
 local m_merge

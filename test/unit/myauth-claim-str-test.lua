@@ -1,5 +1,5 @@
 local iresty_test = require "resty.iresty_test"
-local tb = iresty_test.new({unit_name="myauth.claim-str-test"})
+local tb = iresty_test.new({unit_name="claim-str"})
 
 local claim_str = require "myauth.claim-str"
 

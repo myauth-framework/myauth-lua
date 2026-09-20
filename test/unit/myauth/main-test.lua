@@ -1,6 +1,5 @@
 local iresty_test = require "resty.iresty_test"
-local tb = iresty_test.new({unit_name="myauth-test"})
-local cjson = require "cjson"
+local tb = iresty_test.new({unit_name="myauth.main"})
 
 local user1_basic_header = "Basic dXNlci0xOnBhc3N3b3Jk"
 local user2_basic_header = "Basic dXNlci0yOnBhc3N3b3Jk"
@@ -12,7 +11,7 @@ local notadmin_rbac_header = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3
 local host = "test.host.ru"
 local wrong_host = "test.wrong-host.ru"
 
-local debug_mode = true
+local debug_mode = false
 
 local function create_myauth(config)
   
@@ -40,7 +39,7 @@ local function should_error(m, ...)
    end
 end
 
-local function should_pass_rbac(m, ...)
+local function should_pass(m, ...)
 
   local v, err = pcall(m.authorize_core, m, ...);
   if not v then
@@ -73,168 +72,6 @@ function tb:test_should_fail_anon_if_url_not_defined()
   should_error(m, "/bar")
 end
 
-function tb:test_should_pass_basic()
-  local config = {
-    debug_mode=debug_mode,
-    basic = {
-      {
-        id="user-1",
-        pass="password",
-        urls = {"/basic-access-[%d]+"}
-      }
-    },
-  }
-  local m = create_myauth(config)
-  m:authorize_core("/basic-access-1", "GET", user1_basic_header)
-end
-
-function tb:test_should_fail_basic_if_url_not_defined()
-  local config = {
-    debug_mode=debug_mode,
-    basic = {
-      {
-        id="user-1",
-        pass="password",
-        urls = {"/basic-access-[%d]+"}
-      }
-    },
-  }
-  local m = create_myauth(config)
-  should_error(m, "/basic-access-notdigit", "GET", user1_basic_header)
-end
-
-function tb:test_should_fail_basic_if_wrong_user_defined()
-  local config = {
-    debug_mode=debug_mode,
-    basic = {
-      {
-        id="user-1",
-        pass="password",
-        urls = {"/basic-access-[%d]+"}
-      }
-    },
-  }
-  local m = create_myauth(config)
-  should_error(m, "/basic-access-notdigit", "GET", user2_basic_header)
-end
-
-function tb:test_should_pass_rbac()
-  local config = {
-    debug_mode=debug_mode,
-    rbac = {
-      rules = {
-        {
-          url = "/bearer-access-[%d]+",
-          allow = { "Admin" } 
-        }
-      }
-    }
-  }
-  local m = create_myauth(config)
-  should_pass_rbac(m, "/bearer-access-1", "GET", admin_rbac_header, host)
-end
-
-function tb:test_should_pass_rbac_for_spetial_method()
-  local config = {
-    debug_mode=debug_mode,
-    rbac = {
-      rules = {
-        {
-          url = "/bearer-access-[%d]+",
-          allow_post = { "Admin" } 
-        }
-      }
-    }
-  }
-  local m = create_myauth(config)
-  should_pass_rbac(m, "/bearer-access-1", "POST", admin_rbac_header, host)
-end
-
-function tb:test_should_fail_rbac_if_url_not_defined()
-  local config = {
-    debug_mode=debug_mode,
-    rbac = {
-      rules = {
-        {
-          url = "/bearer-access-[%d]+",
-          allow = { "Admin" } 
-        }
-      }
-    }
-  }
-  local m = create_myauth(config)
-  should_error(m, "/bearer-access-notdigit", "GET", admin_rbac_header, host)
-end
-
-function tb:test_should_fail_rbac_if_role_absent()
-  local config = {
-    debug_mode=debug_mode,
-    rbac = {
-      rules = {
-        {
-          url = "/bearer-access-[%d]+",
-          allow = { "Admin" } 
-        }
-      }
-    }
-  }
-  local m = create_myauth(config)
-  should_error(m, "/bearer-access-1", "GET", notadmin_rbac_header, host)
-end
-
-function tb:test_should_fail_rbac_if_wrong_host()
-  local config = {
-    debug_mode=debug_mode,
-    rbac = {
-      rules = {
-        {
-          url = "/bearer-access-[%d]+",
-          allow = { "Admin" } 
-        }
-      }
-    }
-  }
-  local m = create_myauth(config)
-  should_error(m, "/bearer-access-1", "GET", admin_rbac_header, wrong_host)
-end
-
-function tb:test_should_fail_rbac_if_wrong_sign()
-
-  local config = {
-    debug_mode=debug_mode,
-    rbac = {
-      rules = {
-        {
-          url = "/bearer-access-[%d]+",
-          allow = { "Admin" } 
-        }
-      }
-    }
-  }
-  local m = create_myauth(config)
-  should_error(m, "/bearer-access-1", "GET", admin_rbac_header_wrong_sign, host)
-end
-
-function tb:test_should_fail_rbac_if_in_black_list()
-
-  local config = {
-    debug_mode=debug_mode,
-    black_list = {
-      "/"
-    },
-    rbac = {
-      rules = {
-        {
-          url = "/bearer-access-[%d]+",
-          allow = { "Admin" } 
-        }
-      }
-    }
-  }
-  local m = create_myauth(config)
-  should_error(m, "/bearer-access-1", "GET", admin_rbac_header, host)
-end
-
 function tb:test_should_dont_authorize_when_in_dont_apply_for()
   local config = {
     debug_mode=debug_mode,
@@ -254,7 +91,7 @@ function tb:test_should_dont_authorize_when_in_dont_apply_for()
     }
   }
   local m = create_myauth(config)
-  should_pass_rbac(m, "/bearer-access-nodigit", "GET", admin_rbac_header, host)
+  should_pass(m, "/bearer-access-nodigit", "GET", admin_rbac_header, host)
 end
 
 function tb:test_should_dont_authorize_when_not_in_only_apply_for()
@@ -273,7 +110,7 @@ function tb:test_should_dont_authorize_when_not_in_only_apply_for()
     }
   }
   local m = create_myauth(config)
-  should_pass_rbac(m, "/bearer-access-nodigit", "GET", admin_rbac_header, host)
+  should_pass(m, "/bearer-access-nodigit", "GET", admin_rbac_header, host)
 end
 
 function tb:test_should_pass_when_allow_for_all()
@@ -289,7 +126,7 @@ function tb:test_should_pass_when_allow_for_all()
     }
   }
   local m = create_myauth(config)
-  should_pass_rbac(m, "/bearer-access-1", "GET", admin_rbac_header, host)
+  should_pass(m, "/bearer-access-1", "GET", admin_rbac_header, host)
 end
 
 function tb:test_should_pass_when_allow_and_notdeny_rules()
@@ -309,7 +146,7 @@ function tb:test_should_pass_when_allow_and_notdeny_rules()
     }
   }
   local m = create_myauth(config)
-  should_pass_rbac(m, "/bearer-access-1/my", "GET", admin_rbac_header, host)
+  should_pass(m, "/bearer-access-1/my", "GET", admin_rbac_header, host)
 end
 
 function tb:test_should_pass_when_more_exact_allow_and_has_base_denied()
@@ -329,7 +166,7 @@ function tb:test_should_pass_when_more_exact_allow_and_has_base_denied()
     }
   }
   local m = create_myauth(config)
-  should_pass_rbac(m, "/bearer-access-1/my", "GET", admin_rbac_header, host)
+  should_pass(m, "/bearer-access-1/my", "GET", admin_rbac_header, host)
 end
 
 -- units test

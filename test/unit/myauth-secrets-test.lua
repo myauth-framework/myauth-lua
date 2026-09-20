@@ -1,5 +1,5 @@
 local iresty_test = require "resty.iresty_test"
-local tb = iresty_test.new({unit_name="myauth.secrets-test"})
+local tb = iresty_test.new({unit_name="secrets"})
 local cjson = require "cjson"
 
 local test_secrets;

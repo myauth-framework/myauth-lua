@@ -57,6 +57,9 @@ rbac = {
 			url = "/rbac-access-allow",
             allow_for_all = true
 		}
+	},
+	ro_white_list = {
+		"search-my-socks"
 	}
 }
 
