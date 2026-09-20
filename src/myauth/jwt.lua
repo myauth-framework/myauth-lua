@@ -1,5 +1,8 @@
 -- myauth.jwt
 
+local url_tools = require "myauth.url-tools"
+local jwt = require "resty.jwt"
+
 local _M = {}
 
 _M.secret = nil
@@ -16,8 +19,6 @@ local function classify_verify_error(reason)
 end
 
 local function verify_token(token)
-  local jwt = require "resty.jwt"
-
   if _M.secret == nil then
     error("Secret not specified")
   end
@@ -48,8 +49,10 @@ local function audience_entry_matches(entry, host)
     return false
   end
 
-  local ok, captures = pcall(ngx.re.match, host, entry)
-  return ok and captures ~= nil
+  -- local ok, captures = pcall(ngx.re.match, host, entry)
+  -- return ok and captures ~= nil
+
+  return url_tools.check_url(host, entry);
 end
 
 local function audience_matches(aud, host)
