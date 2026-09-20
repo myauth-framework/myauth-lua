@@ -31,6 +31,41 @@ local function verify_token(token)
   return jwt_obj, nil, nil
 end
 
+local function format_audience(aud)
+  if type(aud) == "table" then
+    return table.concat(aud, ", ")
+  end
+
+  return tostring(aud)
+end
+
+local function audience_entry_matches(entry, host)
+  if entry == host then
+    return true
+  end
+
+  if type(entry) ~= "string" then
+    return false
+  end
+
+  local ok, captures = pcall(ngx.re.match, host, entry)
+  return ok and captures ~= nil
+end
+
+local function audience_matches(aud, host)
+  if type(aud) == "table" then
+    for _, entry in ipairs(aud) do
+      if audience_entry_matches(entry, host) then
+        return true
+      end
+    end
+
+    return false
+  end
+
+  return audience_entry_matches(aud, host)
+end
+
 local function check_audience(jwt_obj, host)
   if _M.ignore_audience then
     return nil, nil
@@ -44,8 +79,8 @@ local function check_audience(jwt_obj, host)
     return 'no_host', "Cant detect a host to check audience"
   end
 
-  if jwt_obj.payload.aud ~= host then
-    return 'invalid_audience', "Expected '" .. jwt_obj.payload.aud .. "' but actual '" .. host .. "'"
+  if not audience_matches(jwt_obj.payload.aud, host) then
+    return 'invalid_audience', "Expected '" .. format_audience(jwt_obj.payload.aud) .. "' but actual '" .. host .. "'"
   end
 
   return nil, nil
