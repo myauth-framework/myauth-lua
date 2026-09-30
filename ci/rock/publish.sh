@@ -8,7 +8,7 @@ if [ -z "${1:-}" ]; then
 fi
 
 echo "Build & publish ..."
-luarockapikey=$(sed -n '1s/\r$//p' apikey)
+luarockapikey=$(cat apikey)
 
 luarocks upload --skip-pack --force --api-key="$luarockapikey" "myauth-${1}.rockspec"
 
