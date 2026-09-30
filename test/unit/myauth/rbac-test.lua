@@ -11,6 +11,7 @@ local wrong_host = "test.wrong-host.ru"
 local debug_mode = false
 
 function tb:init(  )
+
 end
 
 local function create_myauth(config) 

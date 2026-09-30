@@ -1,6 +1,6 @@
 debug_mode = false
 
-output_scheme = "blabla"
+output_schema = "blabla"
 
 dont_apply_for = {
 	"/free_for_access_new"

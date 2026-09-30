@@ -63,6 +63,10 @@ function EmptyEventListener:on_deny_no_rbac_rules_found(url, http_method, sub)
 	
 end
 
+function EmptyEventListener:on_deny_readonly(url, http_method, sub)
+	
+end
+
 function EmptyEventListener:on_allow_rbac(url, http_method, sub)
 	
 end

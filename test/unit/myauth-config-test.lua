@@ -29,9 +29,9 @@ function tb:test_should_not_merge_debug_mode()
    end
 end
 
-function tb:test_should_not_merge_output_scheme()
-   if(m_merge.output_scheme ~= 'myauth2') then
-      error("Output scheme has unexpected value (".. (m_merge.output_scheme or "[nil]") ..")")
+function tb:test_should_not_merge_output_schema()
+   if(m_merge.output_schema ~= 'myauth2') then
+      error("Output scheme has unexpected value (".. (m_merge.output_schema or "[nil]") ..")")
    end
 end
 
@@ -262,9 +262,9 @@ function tb:test_should_load_debug_mode()
 
 end
 
-function tb:test_should_load_output_scheme()
+function tb:test_should_load_output_schema()
 
-  if(m.output_scheme ~= "myauth2") then
+  if(m.output_schema ~= "myauth2") then
       error("Output scheme not loaded")
    end
 

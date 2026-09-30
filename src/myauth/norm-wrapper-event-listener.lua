@@ -68,6 +68,10 @@ function NormWrapperEventListener:on_deny_no_rbac_rules_found(url, http_method, 
 	self._inner:on_deny_no_rbac_rules_found(url_tools.to_url_pattern(url), http_method, sub)
 end
 
+function NormWrapperEventListener:on_deny_readonly(url, http_method, sub)
+	self._inner:on_deny_readonly(url_tools.to_url_pattern(url), http_method, sub)
+end
+
 function NormWrapperEventListener:on_allow_rbac(url, http_method, sub)
 	self._inner:on_allow_rbac(url_tools.to_url_pattern(url), http_method, sub)
 end
