@@ -1,6 +1,6 @@
 debug_mode = true
 
-output_scheme = "myauth2"
+output_schema = "myauth2"
 
 dont_apply_for = {
 	"/free_for_access"

@@ -97,8 +97,8 @@ function _M.load(filepath, baseConfig)
 	   	if(resConfig.debug_mode == nil) then
 	   		resConfig.debug_mode = configEnv.debug_mode
 		end
-		if(resConfig.output_scheme == nil) then
-	   		resConfig.output_scheme = configEnv.output_scheme
+		if(resConfig.output_schema == nil) then
+	   		resConfig.output_schema = configEnv.output_schema
 	   	end
 
 	   	resConfig.rbac = merge_rbac(resConfig.rbac, configEnv.rbac)
