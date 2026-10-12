@@ -34,9 +34,9 @@ build = {
     ['myauth.norm-wrapper-event-listener'] = 'src/myauth/norm-wrapper-event-listener.lua',
     ['myauth.prometheus-event-listener'] = 'src/myauth/prometheus-event-listener.lua',
     ['myauth.url-tools'] = 'src/myauth/url-tools.lua',
-    ['myauth.anon'] = 'src/myauth/myauth/anon.lua',
-    ['myauth.rbac'] = 'src/myauth/myauth/rbac.lua',
-    ['myauth.basic'] = 'src/myauth/myauth/basic.lua',
-    ['myauth.url-filters'] = 'src/myauth/myauth/url-filters.lua'
+    ['myauth.anon'] = 'src/myauth/anon.lua',
+    ['myauth.rbac'] = 'src/myauth/rbac.lua',
+    ['myauth.basic'] = 'src/myauth/basic.lua',
+    ['myauth.url-filters'] = 'src/myauth/url-filters.lua'
   }
 }
